@@ -1,5 +1,5 @@
 ifneq ($(KERNELRELEASE),)
-	obj-m := hd44780.o
+	obj-m := hd44780-cuimhne.o
 	hd44780-y := hd44780-i2c.o hd44780-dev.o
 
 else
