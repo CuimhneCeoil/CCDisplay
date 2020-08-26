@@ -413,6 +413,35 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             return 0;
         }
         break;
+    case 'm':
+        if (num2 > -1) {
+            // Not a valid escape sequence, m has second number
+            hd44780_flush_esc_seq(lcd);
+            return 0;
+        }
+        if (num1 < 0)
+        {
+            // turn off character modes
+            hd44780_set_cursor_blink( lcd, false );
+            hd44780_set_cursor_display( lcd, false );
+            hd44780_leave_esc_seq(lcd);
+            return 1;
+        } else if (num1 == 4 ) {
+            // underline mode
+            hd44780_set_cursor_display( lcd, true );
+            hd44780_leave_esc_seq(lcd);
+            return 1;
+        } else if (num1 == 5 ) {
+            // blink mode
+            hd44780_set_cursor_blink( lcd, true );
+            hd44780_leave_esc_seq(lcd);
+            return 1;
+        } else {
+            // not a valid number
+            hd44780_flush_esc_seq(lcd);
+            return 0;
+        }
+        break;
 
     default:
         hd44780_flush_esc_seq(lcd);
@@ -487,6 +516,12 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
                 break;
             case '\e':
                 lcd->is_in_esc_seq = true;
+                break;
+            case 0x11: // ^S
+                hd44780_set_backlight( lcd, false );
+                break;
+            case 0x13: // ^Q
+                hd44780_set_backlight( lcd, true );
                 break;
             default:
                 hd44780_write_char(lcd, ch);

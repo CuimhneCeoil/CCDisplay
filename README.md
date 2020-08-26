@@ -15,6 +15,10 @@ Supported escape sequences:
 * `\r` - carriage return
 * `\n` - line feed (new line)
 
+Supported control codes:
+* `Ctrl-S`/`0x11` - backlight off
+* `Ctrl-Q`/`0x13` - backlight on
+
 Supported VT100 terminal control escape sequences:
 * `<ESC>[H` - cursor home
 * `<ESC>[row;colH` - cursor to row, col (zero index origin)
@@ -24,6 +28,11 @@ Supported VT100 terminal control escape sequences:
 * `<ESC>[nD` - Move cursor left n characters
 
 **Note**: if column or row is beyond the display it the position will wrap around, it does not scroll.
+
+Modified VT100 control escape sequences:
+* `<ESC>[m>`/`<ESC>[0m` - turn off cursor attributes
+* `<ESC>[4m>` - turn on cursor display
+* `<ESC>[5m>` - turn on cursor blink
 
 Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 * `backlight` - controls LCD backlight. Possible values: `0`, `1`
