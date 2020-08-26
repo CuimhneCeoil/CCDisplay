@@ -17,7 +17,13 @@ Supported escape sequences:
 
 Supported VT100 terminal control escape sequences:
 * `<ESC>[H` - cursor home
-* `<ESC>[2J` - erase screen
+* `<ESC>[row;colH` - cursor to row, col (zero index origin)
+* `<ESC>[nA` - Move cursor up n lines
+* `<ESC>[nB` - Move cursor down n lines
+* `<ESC>[nC` - Move cursor right n characters
+* `<ESC>[nD` - Move cursor left n characters
+
+**Note**: if column or row is beyond the display it the position will wrap around, it does not scroll.
 
 Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 * `backlight` - controls LCD backlight. Possible values: `0`, `1`

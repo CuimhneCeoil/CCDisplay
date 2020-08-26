@@ -337,6 +337,39 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         }
     }
     switch( *idx ) {
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+        if (num2 > -1) {
+            // Not a valid escape sequence, A has second number
+            hd44780_flush_esc_seq(lcd);
+            return 0;
+        }
+        if (num1 <= 0)
+        {
+            num1 = 1;
+        }
+        switch(*idx) {
+        case 'A':
+            lcd->pos.row -= num1;
+            break;
+        case 'B':
+            lcd->pos.row += num1;
+            break;
+        case 'C':
+            lcd->pos.col += num1;
+            break;
+        case 'D':
+            lcd->pos.col -= num1;
+            break;
+        }
+        lcd->pos.row %= lcd->geometry->rows;
+        lcd->pos.col %= lcd->geometry->cols;
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (lcd->geometry->start_addrs[lcd->pos.row] + lcd->pos.col));
+        hd44780_leave_esc_seq(lcd);
+        return 1;
+
     case 'H':
         if (num1 > -1)
         {
@@ -348,19 +381,14 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             num1 = 0;
             num2 = 0;
         }
-        // row = num1
-        // col = num2
-        // Move cursor %i,%i\n", num1, num2 );
-        num1 = num1 % lcd->geometry->rows;
-        num2 = num2 % lcd->geometry->cols;
+        lcd->pos.row = num1 % lcd->geometry->rows;
+        lcd->pos.col = num2 % lcd->geometry->cols;
 
-        if (num1 == 0 && num2 == 0) {
+        if (lcd->pos.row == 0 && lcd->pos.col == 0) {
             hd44780_write_instruction(lcd, HD44780_RETURN_HOME);
         } else {
-            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (lcd->geometry->start_addrs[num1] + num2));
+            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (lcd->geometry->start_addrs[lcd->pos.row] + lcd->pos.col));
         }
-        lcd->pos.row = num1;
-        lcd->pos.col = num2;
         hd44780_leave_esc_seq(lcd);
         return 1;
 
@@ -373,7 +401,6 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
                 hd44780_clear_display(lcd);
                 hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (lcd->geometry->start_addrs[prev_row] + prev_col));
                 hd44780_leave_esc_seq(lcd);
-
                 return 1;
             } else {
                 // Not a valid escape sequence, J has second number
@@ -400,7 +427,7 @@ VT100 sequence buffer builder.  fills out lcd->esc_seq_buf
 */
 
 static int hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
-    lcd->esc_seq_buf.buf[ lcd->esc_seq_buf.length ] = ch;
+    lcd->esc_seq_buf.buf[ lcd->esc_seq_buf.length++ ] = ch;
     if (lcd->esc_seq_buf.length == 1)
     {
         if (lcd->esc_seq_buf.buf[0] != '[')
