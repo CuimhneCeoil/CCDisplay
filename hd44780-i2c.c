@@ -41,7 +41,7 @@ struct hd44780 {
         int length;
     } esc_seq_buf;
     bool is_in_esc_seq;
-    byte p_counter;
+    char p_counter;
 
     bool backlight;
     bool cursor_blink;
@@ -501,7 +501,7 @@ static int hd44780_set_char(struct hd44780 *lcd, const char* buf )
         return false;
     }
     buf++;
-    u8 code[8];
+    u8[8] code;
     int idx;
     for( idx=0;idx<8;idx++)
     {
@@ -526,7 +526,7 @@ static int hd44780_set_char(struct hd44780 *lcd, const char* buf )
         }
     }
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
-    for (idx=0;i<8;i++)   {
+    for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
     }
     return true;
