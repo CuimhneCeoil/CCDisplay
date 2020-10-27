@@ -41,6 +41,7 @@ struct hd44780 {
         int length;
     } esc_seq_buf;
     bool is_in_esc_seq;
+    byte p_counter;
 
     bool backlight;
     bool cursor_blink;
@@ -464,6 +465,7 @@ static int hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
             hd44780_flush_esc_seq(lcd);
         }
     } else {
+
         // check for end character (not digit or semi-colon)
         if (!strchr( "0123456789;", ch )) {
             lcd->esc_seq_buf.buf[lcd->esc_seq_buf.length] = 0;
@@ -489,6 +491,46 @@ static void hd44780_handle_esc_seq_char(struct hd44780 *lcd, char ch)
     if (hd44780_parse_vt100(ch, lcd)) {
         hd44780_leave_esc_seq(lcd);
     }
+}
+
+static int hd44780_set_char(struct hd44780 *lcd, const char* buf )
+{
+    int charNum = *buf - '0';
+    if (charNum < 0 || charNum > 7)
+    {
+        return false;
+    }
+    buf++;
+    u8 code[8];
+    int idx;
+    for( idx=0;idx<8;idx++)
+    {
+        if (*buf <= '9')
+        {
+            if (*buf >='0')
+            {
+                code[idx] = (u8)(*buf - '0');
+            }
+            else {
+                return false;
+            }
+        }
+        else if (*buf <='V') {
+            if (*buf >='A') {
+                code[idx] = (u8)(*buf - 'A' + 10);
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
+    for (idx=0;i<8;i++)   {
+        hd44780_write_data( lcd, code[idx]  );
+    }
+    return true;
+
 }
 
 void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
@@ -523,6 +565,16 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
             case 0x13: // ^Q
                 hd44780_set_backlight( lcd, true );
                 break;
+            case 0x10: // ^P
+                if (i+9 < count)
+                {
+                    if (hd44780_set_char( lcd, &buf[i+1] ))
+                    {
+                        i+=9;
+                        break;
+                    }
+                }
+                // fall through
             default:
                 hd44780_write_char(lcd, ch);
                 break;
@@ -782,6 +834,7 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
     lcd->pos.col = 0;
     memset(lcd->esc_seq_buf.buf, 0, ESC_SEQ_BUF_SIZE);
     lcd->esc_seq_buf.length = 0;
+    lcd->p_counter = 0;
     lcd->is_in_esc_seq = false;
     lcd->backlight = true;
     lcd->cursor_blink = true;

@@ -16,8 +16,10 @@ Supported escape sequences:
 * `\n` - line feed (new line)
 
 Supported control codes:
-* `Ctrl-S`/`0x11` - backlight off
-* `Ctrl-Q`/`0x13` - backlight on
+* `Ctrl-P`/`0x10` - custom character
+  * must be followed by 9 characters.  The first is the number of the character to set (0-7).  The next 8 are the 8 lines of the character encoded in base 32.  See https://www.unitconverters.net/numbers/binary-to-base-32.htm for conversion assistance.
+* `Ctrl-S`/`0x13` - backlight off
+* `Ctrl-Q`/`0x11` - backlight on
 
 Supported VT100 terminal control escape sequences:
 * `<ESC>[2J` - erase screen
@@ -32,9 +34,9 @@ Supported VT100 terminal control escape sequences:
 
 Modified VT100 control escape sequences:
 * `<ESC>[m>`/`<ESC>[0m` - turn off cursor attributes
-* `<ESC>[4m>` - turn on cursor display
-* `<ESC>[5m>` - turn on cursor blink
-
+* `<ESC>[4m` - turn on cursor display
+* `<ESC>[5m` - turn on cursor blink
+    
 Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 * `backlight` - controls LCD backlight. Possible values: `0`, `1`
 * `geometry` - sets LCD geometry. Possible values: `20x4`, `16x2`, `8x1`
