@@ -495,13 +495,13 @@ static void hd44780_handle_esc_seq_char(struct hd44780 *lcd, char ch)
 
 static int hd44780_set_char(struct hd44780 *lcd, const char* buf )
 {
+    u8 code[8];
     int charNum = *buf - '0';
     if (charNum < 0 || charNum > 7)
     {
         return false;
     }
     buf++;
-    u8[8] code;
     int idx;
     for( idx=0;idx<8;idx++)
     {
