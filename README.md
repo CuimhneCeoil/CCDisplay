@@ -20,6 +20,7 @@ Supported control codes:
 * `Ctrl-Q`/`0x13` - backlight on
 
 Supported VT100 terminal control escape sequences:
+* `<ESC>[2J` - erase screen
 * `<ESC>[H` - cursor home
 * `<ESC>[row;colH` - cursor to row, col (zero index origin)
 * `<ESC>[nA` - Move cursor up n lines
