@@ -137,7 +137,7 @@ static s32 pcf8574_raw_read(struct hd44780 *lcd)
 }
 
 
-static u8 hd44780_read_data(struct hd44780 *lcd, u8 data)
+static u8 hd44780_read_data(struct hd44780 *lcd)
 {
     u8 h = (i2c_smbus_read_byte(lcd->i2c_client) << 4) & 0xF0;
     u8 l = i2c_smbus_read_byte(lcd->i2c_client) & 0x0F;
@@ -753,7 +753,7 @@ static ssize_t cursor_display_store(struct device *dev,
 static DEVICE_ATTR_RW(cursor_display);
 
 
-static size_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, const char* buf )
+static size_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, char* buf )
 {
 
     struct hd44780 *lcd = dev_get_drvdata(dev);
@@ -825,7 +825,7 @@ static size_t character_store(int charNum, struct device *dev, struct device_att
 static size_t char0_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 0, dev, attr, buf, count );
 }
-static size_t char0_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char0_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 0, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char0);
@@ -833,7 +833,7 @@ static DEVICE_ATTR_RW(char0);
 static size_t char1_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 1, dev, attr, buf, count );
 }
-static size_t char1_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char1_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 1, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char1);
@@ -841,7 +841,7 @@ static DEVICE_ATTR_RW(char1);
 static size_t char2_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 2, dev, attr, buf, count );
 }
-static size_t char2_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char2_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 2, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char2);
@@ -849,7 +849,7 @@ static DEVICE_ATTR_RW(char2);
 static size_t char3_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 3, dev, attr, buf, count );
 }
-static size_t char3_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char3_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 3, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char3);
@@ -857,7 +857,7 @@ static DEVICE_ATTR_RW(char3);
 static size_t char4_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 4, dev, attr, buf, count );
 }
-static size_t char4_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char4_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 4, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char4);
@@ -865,7 +865,7 @@ static DEVICE_ATTR_RW(char4);
 static size_t char5_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 5, dev, attr, buf, count );
 }
-static size_t char5_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char5_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 5, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char5);
@@ -873,7 +873,7 @@ static DEVICE_ATTR_RW(char5);
 static size_t char6_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 6, dev, attr, buf, count );
 }
-static size_t char6_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char6_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 6, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char6);
@@ -881,7 +881,7 @@ static DEVICE_ATTR_RW(char6);
 static size_t char7_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 7, dev, attr, buf, count );
 }
-static size_t char7_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+static size_t char7_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 7, dev, attr, buf );
 }
 static DEVICE_ATTR_RW(char7);
