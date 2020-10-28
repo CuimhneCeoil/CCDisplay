@@ -127,6 +127,34 @@ struct hd44780_geometry *hd44780_geometries[] = {
 /* Defines possible register that we can write to */
 typedef enum { IR, DR } dest_reg;
 
+/*
+    READ BLOCKS
+*/
+
+static s32 pcf8574_raw_read(struct hd44780 *lcd)
+{
+    return i2c_smbus_read_byte(lcd->i2c_client);
+}
+
+
+static u8 hd44780_read_data(struct hd44780 *lcd, u8 data)
+{
+    u8 h = (data >> 4) & 0x0F;
+    u8 l = data & 0x0F;
+
+    u8 h = (i2c_smbus_read_byte(lcd->i2c_client) << 4) & 0xF0;
+    u8 l = (i2c_smbus_read_byte(lcd->i2c_client) & 0x0F;
+    
+    return (u8) h | l;
+
+}
+
+/*
+
+
+    WRITE BLOCKS
+*/
+
 static void pcf8574_raw_write(struct hd44780 *lcd, u8 data)
 {
     i2c_smbus_write_byte(lcd->i2c_client, data);
@@ -493,45 +521,6 @@ static void hd44780_handle_esc_seq_char(struct hd44780 *lcd, char ch)
     }
 }
 
-static int hd44780_set_char(struct hd44780 *lcd, const char* buf )
-{
-    u8 code[8];
-    int idx;
-    int charNum = *buf - '0';
-    if (charNum < 0 || charNum > 7)
-    {
-        return false;
-    }
-    buf++;
-    for( idx=0;idx<8;idx++)
-    {
-        if (*buf <= '9')
-        {
-            if (*buf >='0')
-            {
-                code[idx] = (u8)(*buf - '0');
-            }
-            else {
-                return false;
-            }
-        }
-        else if (*buf <='V') {
-            if (*buf >='A') {
-                code[idx] = (u8)(*buf - 'A' + 10);
-            }
-            else
-            {
-                return false;
-            }
-        }
-    }
-    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
-    for (idx=0;idx<8;idx++)   {
-        hd44780_write_data( lcd, code[idx]  );
-    }
-    return true;
-}
-
 void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
 {
     size_t i;
@@ -564,16 +553,6 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
             case 0x13: // ^Q
                 hd44780_set_backlight( lcd, true );
                 break;
-            case 0x10: // ^P
-                if (i+9 < count)
-                {
-                    if (hd44780_set_char( lcd, &buf[i+1] ))
-                    {
-                        i+=9;
-                        break;
-                    }
-                }
-                // fall through
             default:
                 hd44780_write_char(lcd, ch);
                 break;
@@ -776,11 +755,153 @@ static ssize_t cursor_display_store(struct device *dev,
 }
 static DEVICE_ATTR_RW(cursor_display);
 
+
+static size_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, const char* buf )
+{
+
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    u8 code[8];
+    int idx;
+
+    mutex_lock(&lcd->lock);
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
+    for (idx=0;idx<8;idx++)   {
+        code[idx] = hd44780_read_data( lcd  );
+    }
+    mutex_unlock(&lcd->lock);
+
+    for( idx=0;idx<8;idx++)
+    {
+        if (code[idx]<=9)
+        {
+            buf[idx]='0'+code[idx];
+        } else {
+            buf[idx]='A'-10+code[idx];
+        }
+    }
+    return 8;
+}
+
+static size_t character_store(int charNum, struct device *dev, struct device_attribute *attr, const char* buf, size_t count )
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    u8 code[8];
+    int idx;
+
+    if (count<7) {
+        return -EINVAL;
+    }
+
+    for( idx=0;idx<8;idx++)
+    {
+        if (buf[idx] <= '9')
+        {
+            if (buf[idx] >='0')
+            {
+                code[idx] = (u8)(buf[idx] - '0');
+            }
+            else {
+                return -EINVAL;
+            }
+        }
+        else if (buf[idx] <='V') {
+            if (buf[idx] >='A') {
+                code[idx] = (u8)(buf[idx] - 'A' + 10);
+            }
+            else
+            {
+                return -EINVAL;
+            }
+        }
+    }
+    mutex_lock(&lcd->lock);
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
+    for (idx=0;idx<8;idx++)   {
+        hd44780_write_data( lcd, code[idx]  );
+    }
+    mutex_unlock(&lcd->lock);
+    return 8;
+}
+
+static size_t char0_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 0, dev, attr, buf, count );
+}
+static size_t char0_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 0, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char0);
+
+static size_t char1_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 1, dev, attr, buf, count );
+}
+static size_t char1_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 1, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char1);
+
+static size_t char2_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 2, dev, attr, buf, count );
+}
+static size_t char2_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 2, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char2);
+
+static size_t char3_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 3, dev, attr, buf, count );
+}
+static size_t char3_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 3, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char3);
+
+static size_t char4_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 4, dev, attr, buf, count );
+}
+static size_t char4_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 4, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char4);
+
+static size_t char5_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 5, dev, attr, buf, count );
+}
+static size_t char5_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 5, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char5);
+
+static size_t char6_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 6, dev, attr, buf, count );
+}
+static size_t char6_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 6, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char6);
+
+static size_t char7_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 7, dev, attr, buf, count );
+}
+static size_t char7_show(struct device *dev, struct device_attribute *attr, const char* buf ) {
+    return character_show( 7, dev, attr, buf );
+}
+static DEVICE_ATTR_RW(char7);
+
 static struct attribute *hd44780_device_attrs[] = {
     &dev_attr_geometry.attr,
     &dev_attr_backlight.attr,
     &dev_attr_cursor_blink.attr,
     &dev_attr_cursor_display.attr,
+    &dev_attr_char0.attr,
+    &dev_attr_char1.attr,
+    &dev_attr_char2.attr,
+    &dev_attr_char3.attr,
+    &dev_attr_char4.attr,
+    &dev_attr_char5.attr,
+    &dev_attr_char6.attr,
+    &dev_attr_char7.attr,
     NULL
 };
 ATTRIBUTE_GROUPS(hd44780_device);
