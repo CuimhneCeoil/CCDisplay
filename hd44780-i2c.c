@@ -139,11 +139,8 @@ static s32 pcf8574_raw_read(struct hd44780 *lcd)
 
 static u8 hd44780_read_data(struct hd44780 *lcd, u8 data)
 {
-    u8 h = (data >> 4) & 0x0F;
-    u8 l = data & 0x0F;
-
     u8 h = (i2c_smbus_read_byte(lcd->i2c_client) << 4) & 0xF0;
-    u8 l = (i2c_smbus_read_byte(lcd->i2c_client) & 0x0F;
+    u8 l = i2c_smbus_read_byte(lcd->i2c_client) & 0x0F;
     
     return (u8) h | l;
 
