@@ -131,12 +131,6 @@ typedef enum { IR, DR } dest_reg;
     READ BLOCKS
 */
 
-static s32 pcf8574_raw_read(struct hd44780 *lcd)
-{
-    return i2c_smbus_read_byte(lcd->i2c_client);
-}
-
-
 static u8 hd44780_read_data(struct hd44780 *lcd)
 {
     u8 h = (i2c_smbus_read_byte(lcd->i2c_client) << 4) & 0xF0;
@@ -1115,6 +1109,6 @@ static void __exit hd44780_mod_exit(void)
 }
 module_exit(hd44780_mod_exit);
 
-MODULE_AUTHOR("Mariusz Gorski <marius.gorski@gmail.com>");
+MODULE_AUTHOR("Claude Warren <claude@xenei.com>");
 MODULE_DESCRIPTION("HD44780 I2C via PCF8574 driver");
 MODULE_LICENSE("GPL");
