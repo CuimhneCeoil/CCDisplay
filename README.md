@@ -48,14 +48,19 @@ The custom characters are 8 lines of 5 bits.  Each line is encoded as a base 32 
 
 ```
 10001 - encodes as -> H
-01010 --------------> A
-00100 --------------> 4
-01010 --------------> A
-10101 --------------> H
+11101 --------------> T
+10101 --------------> L
+00000 --------------> 0
+10001 --------------> H
+10001 --------------> H
+10001 --------------> H
+01110 --------------> E
 ```
-To set this a character 0 execute `echo HA4AH > /sys/class/hd44780/lcd0/char1`
+To set character 0 to this character execute `echo HTL0HHHE > /sys/class/hd44780/lcd0/char1`
 
-the site https://www.unitconverters.net/numbers/binary-to-base-32.htm will provide assistance with the encoding.
+The site https://omerk.github.io/lcdchargen/ will assist in the creation of the patterns.
+
+The site https://www.unitconverters.net/numbers/binary-to-base-32.htm will provide assistance with the encoding.
 
 To print the character simply print `\x0`
 
