@@ -29,7 +29,7 @@ struct hd44780 {
     struct i2c_client *i2c_client;
     struct hd44780_geometry *geometry;
 
-    /* Current cursor positon on the display */
+    /* Current cursor position on the display */
     struct {
         int row;
         int col;
@@ -133,10 +133,13 @@ typedef enum { IR, DR } dest_reg;
 
 static u8 hd44780_read_data(struct hd44780 *lcd)
 {
-    u8 h = (i2c_smbus_read_byte(lcd->i2c_client) << 4) & 0xF0;
-    u8 l = i2c_smbus_read_byte(lcd->i2c_client) & 0x0F;
+
+    u8 h = i2c_smbus_read_byte(lcd->i2c_client);
+    u8 l = i2c_smbus_read_byte(lcd->i2c_client);
     
-    return (u8) h | l;
+    printk (KERN_ALERT "read hex h=%X l=%X \n", h, l );
+
+    return (u8) ((h <<4) & 0xF0) | (l & 0XF);
 
 }
 
@@ -756,32 +759,37 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
     int idx;
 
     mutex_lock(&lcd->lock);
-    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
     for (idx=0;idx<8;idx++)   {
         code[idx] = hd44780_read_data( lcd  );
     }
     mutex_unlock(&lcd->lock);
 
+    printk (KERN_ALERT "read hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+
     for( idx=0;idx<8;idx++)
     {
         if (code[idx]<=9)
         {
-            buf[idx]='0'+code[idx];
+            code[idx]='0'+code[idx];
         } else {
-            buf[idx]='A'-10+code[idx];
+            code[idx]='A'-10+code[idx];
         }
     }
-    return 8;
+     printk (KERN_ALERT "showing = %c%c%c%c%c%c%c%c from character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+    return scnprintf(buf, PAGE_SIZE, "%c%c%c%c%c%c%c%c\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7]);
 }
 
 static ssize_t character_store(int charNum, struct device *dev, struct device_attribute *attr, const char* buf, size_t count )
 {
+     printk (KERN_ALERT "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     u8 code[8];
     int idx;
 
-    if (count<7) {
+    // 8 chars + null
+    if (count!=9) {
         return -EINVAL;
     }
 
@@ -807,16 +815,23 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
             }
         }
     }
+    printk (KERN_ALERT "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+
     mutex_lock(&lcd->lock);
-    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charNum );
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
     for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
     }
     mutex_unlock(&lcd->lock);
-    return 8;
+    
+    return 9;
 }
 
 static ssize_t char0_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+
+
+     printk (KERN_ALERT "count = %d\n", count );
+     printk (KERN_ALERT "value = %c%c%c%c%c%c%c%c\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
     return character_store( 0, dev, attr, buf, count );
 }
 static ssize_t char0_show(struct device *dev, struct device_attribute *attr, char* buf ) {
