@@ -64,6 +64,24 @@ The site https://www.unitconverters.net/numbers/binary-to-base-32.htm will provi
 
 To print the character simply print `\x0`
 
+#### Table of special characters
+
+The table below shows the special characters interpreted by this driver
+
+| Dec | Hex | Oct | Char | Description |
+| --- | --- | --- | ---- | ----------- |
+|  0  |  0  |  0  | Null | custom character 0 |
+|  1  |  1  |  1  | SOX  | custom character 1 |
+|  2  |  2  |  2  | STX  | custom character 2 |
+|  3  |  3  |  3  | ETX  | custom character 3 |
+|  4  |  4  |  4  | EOT  | custom character 4 |
+|  5  |  5  |  5  | ENQ  | custom character 5 |
+|  6  |  6  |  6  | ACK  | custom character 6 |
+|  7  |  7  |  7  | BEL  | custom character 7 |
+| 10  |  A  | 10  |  LF  | line feed          |
+| 13  |  D  | 15  |  CR  | carriage return    |
+| 27  | 1B  | 33  | ESC  | escape             |
+
 ### Usage
 1. Insert kernel module: `insmod hd44780.ko`.
 2. Let the I2C adapter know that there's a new device attached: `echo hd44780 0x27 > /sys/class/i2c-adapter/i2c-1/new_device`.
