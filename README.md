@@ -80,6 +80,8 @@ The table below shows the special characters interpreted by this driver
 |  7  |  7  |  7  | BEL  | custom character 7 |
 | 10  |  A  | 10  |  LF  | line feed          |
 | 13  |  D  | 15  |  CR  | carriage return    |
+| 17  | 11  | 21  | DC1  | backlight on (Ctrl-Q) |
+| 19  | 13  | 23  | DC3  | backlight off (Ctrl-S) |
 | 27  | 1B  | 33  | ESC  | escape             |
 
 ### Usage
