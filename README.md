@@ -16,8 +16,6 @@ Supported escape sequences:
 * `\n` - line feed (new line)
 
 Supported control codes:
-* `Ctrl-P`/`0x10` - custom character
-  * must be followed by 9 characters.  The first is the number of the character to set (0-7).  The next 8 are the 8 lines of the character encoded in base 32.  See https://www.unitconverters.net/numbers/binary-to-base-32.htm for conversion assistance.
 * `Ctrl-S`/`0x13` - backlight off
 * `Ctrl-Q`/`0x11` - backlight on
 
@@ -42,6 +40,24 @@ Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 * `geometry` - sets LCD geometry. Possible values: `20x4`, `16x2`, `8x1`
 * `cursor_blink` - controls cursor blink. Possible values: `0`, `1`
 * `cursor_display` - displays or hides cursor. Possible values: `0`, `1`
+* `char0` through `char7` - sets or displays custom character 0 thorugh 7 respectivly.  Characters are encoded as 8 5-bit patterns encoded in base 32.
+
+#### Character encoding
+
+The custom characters are 8 lines of 5 bits.  Each line is encoded as a base 32 digit.  The values of the encodings are [0-9A-V].  The following shows the encoding for an "X" pattern:
+
+```
+10001 - encodes as -> H
+01010 --------------> A
+00100 --------------> 4
+01010 --------------> A
+10101 --------------> H
+```
+To set this a character 0 execute `echo HA4AH > /sys/class/hd44780/lcd0/char1`
+
+the site https://www.unitconverters.net/numbers/binary-to-base-32.htm will provide assistance with the encoding.
+
+To print the character simply print `\x0`
 
 ### Usage
 1. Insert kernel module: `insmod hd44780.ko`.
