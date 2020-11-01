@@ -44,17 +44,17 @@ Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 
 #### Character encoding
 
-The custom characters are 8 lines of 5 bits.  Each line is encoded as a base 32 digit.  The values of the encodings are [0-9A-V].  The following shows the encoding for an "X" pattern:
+The custom characters are 8 lines of 5 bits.  Each line is encoded as a base 32 digit.  The values of the encodings are [0-9A-V].  The following shows the encoding for a vary small "hi" over a "U" pattern pattern:
 
 ```
-10001 - encodes as -> H
-11101 --------------> T
-10101 --------------> L
-00000 --------------> 0
-10001 --------------> H
-10001 --------------> H
-10001 --------------> H
-01110 --------------> E
+*   *   10001 - encodes as -> H
+*** *   11101 --------------> T
+* * *   10101 --------------> L
+        00000 --------------> 0
+*   *   10001 --------------> H
+*   *   10001 --------------> H
+*   *   10001 --------------> H
+ ***    01110 --------------> E
 ```
 To set character 0 to this character execute `echo HTL0HHHE > /sys/class/hd44780/lcd0/char1`
 
