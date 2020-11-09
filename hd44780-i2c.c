@@ -776,17 +776,18 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
             code[idx]='A'-10+code[idx];
         }
     }
-     printk (KERN_DEBUG "showing = %c%c%c%c%c%c%c%c from character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+    printk (KERN_DEBUG "showing = %c%c%c%c%c%c%c%c from character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
     return scnprintf(buf, PAGE_SIZE, "%c%c%c%c%c%c%c%c\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7]);
 }
 
 static ssize_t character_store(int charNum, struct device *dev, struct device_attribute *attr, const char* buf, size_t count )
 {
-     printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     u8 code[8];
     int idx;
+
+    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
 
     // 8 chars + null
     if (count!=9) {
