@@ -1,3 +1,16 @@
 .cproject
 .project
 .settings
+/.hd44780-cuimhne.ko.cmd
+/.hd44780-cuimhne.mod.cmd
+/.hd44780-cuimhne.mod.o.cmd
+/.hd44780-cuimhne.o.cmd
+/.hd44780-i2c.o.cmd
+/Module.symvers
+/hd44780-cuimhne.ko
+/hd44780-cuimhne.mod
+/hd44780-cuimhne.mod.c
+/hd44780-cuimhne.mod.o
+/hd44780-cuimhne.o
+/hd44780-i2c.o
+/modules.order
