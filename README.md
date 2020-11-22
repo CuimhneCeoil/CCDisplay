@@ -27,6 +27,9 @@ Supported VT100 terminal control escape sequences:
 * `<ESC>[nB` - Move cursor down n lines
 * `<ESC>[nC` - Move cursor right n characters
 * `<ESC>[nD` - Move cursor left n characters
+* `<ESC>[K`/`<ESC>[0K` -Clear line from cursor right
+* `<ESC>[1K` - Clear line from cursor left
+* `<ESC>[2K` - Clear entire line
 
 **Note**: if column or row is beyond the display it the position will wrap around, it does not scroll.
 
