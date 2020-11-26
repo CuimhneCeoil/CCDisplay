@@ -14,6 +14,7 @@
  * HEADER STUFF
  */
 
+#define HD44780_I2C_VERSION=1.0.0
 #define BUF_SIZE        64
 #define ESC_SEQ_BUF_SIZE    16
 
@@ -1040,7 +1041,7 @@ static int hd44780_probe(struct i2c_client *client, const struct i2c_device_id *
 
     hd44780_init_lcd(lcd);
 
-    hd44780_print(lcd, "Cuimhne Ceoil on /dev/");
+    hd44780_print(lcd, "hd44780-i2c on /dev/");
     hd44780_print(lcd, device->kobj.name);
     lcd->dirty = true;
 
