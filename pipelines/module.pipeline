@@ -46,15 +46,16 @@ pipeline {
                     sh '''
                     export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
                     export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
-                    mkdir -p scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
-                    cp ../hd44780-i2c/*.ko scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
-                    export VERSION_STRING=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
-                    export VERSION_STRING=" ${VERSION_STRING}-${KERNEL_VERSION}"
-                    sed -i "/VERSION_STRING/${VERSION_STRING}/g" source/control
-                    # execute the package
-                    dh clean ; \
-                    dh build ; \
-                    fakeroot dh binary ; 
+                    export HD44780_I2C_VERSION=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
+                    export VERSION_STRING="${HD44780_I2C_VERSION}-${KERNEL_VERSION}"
+                    export BUILD_DIR=../hd44780-i2c-${HD44780_I2C_VERSION}
+                    mkdir ${BUILD_DIR}
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/changelog
+                    rsync -rp DEBIAN ${BUILD_DIR}
+                    mkdir -p ${BUILD_DIR}/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    cp ../hd44780-i2c/*.ko ${BUILD_DIR}/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    fakeroot dpkg-deb --build ${BUILD_DIR}
                     '''
                 }
 	        }
