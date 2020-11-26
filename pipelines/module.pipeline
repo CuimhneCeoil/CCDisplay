@@ -8,11 +8,14 @@ pipeline {
             }
             steps {
                 deleteDir()
+                step( "Clone Source" ) {
                 sh '''
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
                     git clone --depth=1 --branch=rpi-${version}.y https://github.com/raspberrypi/linux ;
                 '''
+                }
+                step( "Build Linux ) {
                 dir ("linux") {
                     sh '''
                     export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
@@ -23,6 +26,9 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
                    '''
                 }
+                }
+                
+                step( "Build HD44780-i2c" ) {
                 dir ("hd44780-i2c" ) {
                     sh '''
                     export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
@@ -31,13 +37,26 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- 
                     '''
                 }
+                }
+                
+                step( "Package HD44780-i2c" ) {
                 dir ("hd44780-i2c-pkg") {
                     sh '''
                     export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
                     export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
                     mkdir -p scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
                     cp ../hd44780-i2c/*.ko scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    export VERSION_STRING=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
+                    export VERSION_STRING=" ${VERSION_STRING}-${KERNEL_VERSION}
+                    sed -i "/VERSION_STRING/${VERSION_STRING}/g" source/control
+                    # execute the package
+                    dh clean ; \
+                    dh build ; \
+                    fakeroot dh binary ; 
+                    '''
+                    
                 } 
+                }
             }
             
         }

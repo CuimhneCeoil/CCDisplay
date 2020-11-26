@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 9)
 Standards-Version: 3.9.5
 
 Package: hd44780-i2c
-Version: [Version]
+Version: VERSION_STRING
 Architecture: arm
 Pre-Depends: dpkg (>= 1.16.1), python3.7, ${misc:Pre-Depends}
 Suggests: i2c-tools
