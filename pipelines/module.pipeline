@@ -49,7 +49,7 @@ pipeline {
                     mkdir -p scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
                     cp ../hd44780-i2c/*.ko scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
                     export VERSION_STRING=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
-                    export VERSION_STRING=" ${VERSION_STRING}-${KERNEL_VERSION}
+                    export VERSION_STRING=" ${VERSION_STRING}-${KERNEL_VERSION}"
                     sed -i "/VERSION_STRING/${VERSION_STRING}/g" source/control
                     # execute the package
                     dh clean ; \
