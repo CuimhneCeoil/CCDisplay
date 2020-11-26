@@ -1,0 +1,15 @@
+Source: hd44780-i2c
+Section: kernel
+Priority: optional
+Maintainer: Claude Warren <claude@xenei.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.5
+
+Package: hd44780-i2c
+Version: [Version]
+Architecture: arm
+Pre-Depends: dpkg (>= 1.16.1), python3.7, ${misc:Pre-Depends}
+Suggests: i2c-tools
+Depends: 
+Description: Provides HD44780 over I2C on /dev/lcd?
+ Provides HD44780 over I2C on /dev/lcd.

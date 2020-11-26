@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            agent {
+                label 'localhost'
+            }
+            steps {
+                deleteDir()
+                sh '''
+                    git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
+                    git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
+                    git clone --depth=1 --branch=rpi-${version}.y https://github.com/raspberrypi/linux ;
+                '''
+                dir ("linux") {
+                    sh '''
+                    export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
+                    export KERNEL=kernel ; 
+                    make ARCH=arm CROSS_COMPILE=${platform}- bcmrpi_defconfig ;    
+                    make ARCH=arm CROSS_COMPILE=${platform}- oldconfig ;    
+                    make ARCH=arm CROSS_COMPILE=${platform}- prepare ;    
+                    make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
+                   '''
+                }
+                dir ("hd44780-i2c" ) {
+                    sh '''
+                    export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
+                    export KERNEL=kernel ; 
+                    export KERNELDIR=../linux
+                    make ARCH=arm CROSS_COMPILE=${platform}- 
+                    '''
+                }
+                dir ("hd44780-i2c-pkg") {
+                    sh '''
+                    export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
+                    export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
+                    mkdir -p scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    cp ../hd44780-i2c/*.ko scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                } 
+            }
+            
+        }
+    }
+    
+}
