@@ -12,8 +12,8 @@ pipeline {
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
                     git clone --depth=1 --branch=rpi-${version}.y https://github.com/raspberrypi/linux ;
                 '''
-                }
             }
+        }
         stage( "Build Linux ) {
             steps {
                 dir ("linux") {
@@ -27,6 +27,7 @@ pipeline {
                    '''
                 }
             }
+        }
         stage( "Build HD44780-i2c" ) {
             steps {
                 dir ("hd44780-i2c" ) {
@@ -38,6 +39,7 @@ pipeline {
                     '''
                 }
             }
+        }
         stage( "Package HD44780-i2c" ) {
             steps {
                 dir ("hd44780-i2c-pkg") {
@@ -54,11 +56,8 @@ pipeline {
                     dh build ; \
                     fakeroot dh binary ; 
                     '''
-                    
-                } 
+                }
 	        }
-            
         }
     }
-    
 }
