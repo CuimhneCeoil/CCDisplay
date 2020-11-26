@@ -1,21 +1,21 @@
 pipeline {
-    agent any
-
-    stages {
-        stage('Build') {
-            agent {
+     agent {
                 label 'localhost'
             }
+
+    stages {
+        stage('Clone Source') {
             steps {
                 deleteDir()
-                step( "Clone Source" ) {
                 sh '''
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
                     git clone --depth=1 --branch=rpi-${version}.y https://github.com/raspberrypi/linux ;
                 '''
                 }
-                step( "Build Linux ) {
+            }
+        stage( "Build Linux ) {
+            steps {
                 dir ("linux") {
                     sh '''
                     export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
@@ -26,9 +26,9 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
                    '''
                 }
-                }
-                
-                step( "Build HD44780-i2c" ) {
+            }
+        stage( "Build HD44780-i2c" ) {
+            steps {
                 dir ("hd44780-i2c" ) {
                     sh '''
                     export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
@@ -37,9 +37,9 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- 
                     '''
                 }
-                }
-                
-                step( "Package HD44780-i2c" ) {
+            }
+        stage( "Package HD44780-i2c" ) {
+            steps {
                 dir ("hd44780-i2c-pkg") {
                     sh '''
                     export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
@@ -56,8 +56,7 @@ pipeline {
                     '''
                     
                 } 
-                }
-            }
+	        }
             
         }
     }
