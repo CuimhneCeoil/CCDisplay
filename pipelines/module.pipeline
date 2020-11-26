@@ -48,7 +48,7 @@ pipeline {
                     export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
                     export HD44780_I2C_VERSION=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
                     export VERSION_STRING="${HD44780_I2C_VERSION}-${KERNEL_VERSION}"
-                    export BUILD_DIR=../hd44780-i2c-${HD44780_I2C_VERSION}
+                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}
                     mkdir ${BUILD_DIR}
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/changelog
@@ -59,6 +59,12 @@ pipeline {
                     '''
                 }
 	        }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'hd44780-i2c-*.deb', followSymlinks: false, onlyIfSuccessful: true    
+                    build job: 'Package_Index', parameters: [string(name: 'project', value: 'hd44780-i2c-pkg'), string(name: 'files', value: '*.deb')]
+                }
+            }
         }
     }
 }
