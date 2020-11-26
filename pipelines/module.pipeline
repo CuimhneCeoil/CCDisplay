@@ -14,7 +14,7 @@ pipeline {
                 '''
             }
         }
-        stage( "Build Linux ) {
+        stage( "Build Linux" ) {
             steps {
                 dir ("linux") {
                     sh '''
