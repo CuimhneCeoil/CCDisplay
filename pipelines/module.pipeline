@@ -24,6 +24,7 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- oldconfig ;    
                     make ARCH=arm CROSS_COMPILE=${platform}- prepare ;    
                     #make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
+                    make ARCH=arm CROSS_COMPILE=${platform}- scripts -j4 ;
                    '''
                 }
             }
