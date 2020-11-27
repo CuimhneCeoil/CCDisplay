@@ -18,7 +18,8 @@ set -e
 
 case "$1" in
     configure)
-        
+        rmmod /lib/modules/$(uname -r)/kernel/drivers/auxdisplay/hd44780.ko
+        insmod /lib/modules/$(uname -r)/extra/drivers/auxdisplay/hd44780-i2c.ko 
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

@@ -3,6 +3,7 @@ Section: kernel
 Priority: optional
 Maintainer: Claude Warren <claude@xenei.com>
 Version: VERSION_STRING
+Kernel-Version: KERNEL_VERSION
 Architecture: arm
 Suggests: i2c-tools
 Description: Provides HD44780 over I2C on /dev/lcd?
