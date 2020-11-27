@@ -9,7 +9,7 @@ else
 VERSION=1.0.0
 
 default:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) --eval=-DVERSION=\"$(VERSION)\" modules
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
