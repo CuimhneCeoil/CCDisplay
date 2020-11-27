@@ -6,8 +6,10 @@ else
 	KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 	PWD := $(shell pwd)
 
+VERSION=1.0.0
+
 default:
-	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) -DVERSION=\"$(VERSION)\" modules
 
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean

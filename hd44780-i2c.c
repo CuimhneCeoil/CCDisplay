@@ -14,7 +14,6 @@
  * HEADER STUFF
  */
 
-#define HD44780_I2C_VERSION=1.0.0
 #define BUF_SIZE        64
 #define ESC_SEQ_BUF_SIZE    16
 
