@@ -51,7 +51,7 @@ pipeline {
                     export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}
                     mkdir ${BUILD_DIR}
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
-                    sed -i "s/KERNEL_VERSION/${KERNEL_VERSION}/g" DEBIAN/control
+                    sed -i "s/KERNEL_VERSION/${version}/g" DEBIAN/control
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/changelog
                     rsync -rp DEBIAN ${BUILD_DIR}
                     mkdir -p ${BUILD_DIR}/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
