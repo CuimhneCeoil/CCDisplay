@@ -23,7 +23,7 @@ pipeline {
                     make ARCH=arm CROSS_COMPILE=${platform}- bcmrpi_defconfig ;    
                     make ARCH=arm CROSS_COMPILE=${platform}- oldconfig ;    
                     make ARCH=arm CROSS_COMPILE=${platform}- prepare ;    
-                    make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
+                    #make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
                    '''
                 }
             }
@@ -46,8 +46,7 @@ pipeline {
                     sh '''
                     export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
                     export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
-                    export HD44780_I2C_VERSION=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
-                    export VERSION_STRING="${HD44780_I2C_VERSION}-${KERNEL_VERSION}"
+                    export VERSION_STRING=`grep "HD44780_I2C_VERSION" ../hd44780-i2c/hd44780-i2c.c | cut -d= -f2`
                     export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}
                     mkdir ${BUILD_DIR}
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
