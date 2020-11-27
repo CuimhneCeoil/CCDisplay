@@ -48,7 +48,7 @@ pipeline {
                     export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
                     export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
                     export VERSION_STRING=`grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2`
-                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}\(${version}\)
+                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}\\(${version}\\)
                     mkdir ${BUILD_DIR}
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
                     sed -i "s/KERNEL_VERSION/${version}/g" DEBIAN/control
