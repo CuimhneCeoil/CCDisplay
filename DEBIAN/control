@@ -1,6 +1,7 @@
 Package: hd44780-i2c
 Section: kernel
 Priority: optional
+Standards-Version: 3.9.5
 Maintainer: Claude Warren <claude@xenei.com>
 Version: VERSION_STRING
 Kernel-Version: KERNEL_VERSION

@@ -54,8 +54,8 @@ pipeline {
                     sed -i "s/KERNEL_VERSION/${version}/g" DEBIAN/control
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/changelog
                     rsync -rp DEBIAN ${BUILD_DIR}
-                    mkdir -p ${BUILD_DIR}/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
-                    cp ../hd44780-i2c/*.ko ${BUILD_DIR}/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    mkdir -p ${BUILD_DIR}/scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
+                    cp ../hd44780-i2c/*.ko ${BUILD_DIR}/scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
                     fakeroot dpkg-deb --build ${BUILD_DIR}
                     '''
                 }
