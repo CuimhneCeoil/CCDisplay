@@ -94,12 +94,13 @@ pipeline {
                 }
 	        }
         
-            post {
-                success {
-                    archiveArtifacts artifacts: 'hd44780-i2c-*.deb', followSymlinks: false, onlyIfSuccessful: true    
-                    build job: 'Package_Index', parameters: [string(name: 'project', value: 'hd44780-i2c-pkg'), string(name: 'files', value: '*.deb')]
-                }
-            }
+            
+        }
+    }
+    post {
+        success {
+            archiveArtifacts artifacts: 'hd44780-i2c-*.deb', followSymlinks: false, onlyIfSuccessful: true    
+            build job: 'Package_Index', parameters: [string(name: 'project', value: 'hd44780-i2c-pkg'), string(name: 'files', value: '*.deb')]
         }
     }
 }
