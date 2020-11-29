@@ -14,3 +14,4 @@
 /hd44780-cuimhne.o
 /hd44780-i2c.o
 /modules.order
+/dkms.conf

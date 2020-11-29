@@ -21,5 +21,5 @@ default:
 clean:
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 
-
+endif
 	
