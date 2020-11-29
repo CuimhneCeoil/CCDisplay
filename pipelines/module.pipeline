@@ -1,5 +1,4 @@
-def VERSION_STRING = "INVALID"
-def BUILD_DIR = "INVALID"
+
 
 pipeline {
      agent {
@@ -31,10 +30,10 @@ pipeline {
 					]
 				])
 				sh '''
-                	env.VERSION_STRING = `grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1`
-                	env.BUILD_DIR = `echo hd44780-i2c-${env.VERSION_STRING}`
-                	mkdir -p ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
-                	mv hd44780-i2c ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
+                	export VERSION_STRING = `grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1`
+                	export BUILD_DIR = `echo hd44780-i2c-${env.VERSION_STRING}`
+                	mkdir -p scripts/usr/src/${BUILD_DIR}
+                	mv hd44780-i2c scripts/usr/src/${BUILD_DIR}
                 '''
             }
         }
