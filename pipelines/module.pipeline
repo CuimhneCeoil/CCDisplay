@@ -19,7 +19,11 @@ pipeline {
                 			noTags: false, 
                 			reference: '', 
                 			shallow: true
-            			]
+            			],
+            			 [
+            			 	$class: 'RelativeTargetDirectory', 
+            			 	relativeTargetDir: 'hd44780-i2c'
+        			 	]
         			], 
         			submoduleCfg: [], 
         			userRemoteConfigs: [
@@ -30,7 +34,7 @@ pipeline {
 					]
 				])
 				sh '''
-                	export VERSION_STRING=`grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1`
+                	export VERSION_STRING=`grep "VERSION" hd44780-i2c/Makefile | cut -d= -f2 | head -1`
                 	export BUILD_DIR=`echo hd44780-i2c-${env.VERSION_STRING}`
                 	mkdir -p scripts/usr/src/${BUILD_DIR}
                 	mv hd44780-i2c scripts/usr/src/${BUILD_DIR}
