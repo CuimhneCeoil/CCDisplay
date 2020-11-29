@@ -6,6 +6,7 @@ Maintainer: Claude Warren <claude@xenei.com>
 Version: VERSION_STRING
 Kernel-Version: KERNEL_VERSION
 Architecture: armhf
+Depends: dkms
 Suggests: i2c-tools
 Description: Provides HD44780 over I2C on /dev/lcd?
  Provides HD44780 over I2C on /dev/lcd.

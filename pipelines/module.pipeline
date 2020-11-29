@@ -10,33 +10,14 @@ pipeline {
                 sh '''
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
-                    git clone --depth=1 --branch=rpi-${version}.y https://github.com/raspberrypi/linux ;
                 '''
             }
         }
-        stage( "Build Linux" ) {
-            steps {
-                dir ("linux") {
-                    sh '''
-                    export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
-                    export KERNEL=kernel ; 
-                    make ARCH=arm CROSS_COMPILE=${platform}- bcmrpi_defconfig ;    
-                    make ARCH=arm CROSS_COMPILE=${platform}- oldconfig ;    
-                    make ARCH=arm CROSS_COMPILE=${platform}- prepare ;    
-                    #make ARCH=arm CROSS_COMPILE=${platform}- modules -j4 ;   
-                    make ARCH=arm CROSS_COMPILE=${platform}- scripts -j4 ;
-                   '''
-                }
-            }
-        }
-        stage( "Build HD44780-i2c" ) {
+        stage( "Prepare DKMS" ) {
             steps {
                 dir ("hd44780-i2c" ) {
                     sh '''
-                    export PATH=$PATH:/opt/tools/arm-bcm2708/${platform}/bin ; 
-                    export KERNEL=kernel ; 
-                    export KERNELDIR=../linux
-                    make ARCH=arm CROSS_COMPILE=${platform}- 
+                    make dkms.conf 
                     '''
                 }
             }
@@ -45,18 +26,19 @@ pipeline {
             steps {
                 dir ("hd44780-i2c-pkg") {
                     sh '''
-                    export KERNEL_VERSION=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelversion)
-                    export KERNEL_RELEASE=$(cd ../linux;make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- kernelrelease)
                     export VERSION_STRING=`grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2`
-                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}\\(${version}\\)
+                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}
                     mkdir ${BUILD_DIR}
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/control
-                    sed -i "s/KERNEL_VERSION/${version}/g" DEBIAN/control
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" DEBIAN/changelog
-                    rsync -rp DEBIAN ${BUILD_DIR}
-                    mkdir -p ${BUILD_DIR}/scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
-                    cp ../hd44780-i2c/*.ko ${BUILD_DIR}/scripts/lib/modules/${KERNEL_RELEASE}/extra/drivers/auxdisplay/
-                    fakeroot dpkg-deb --build ${BUILD_DIR}
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/control
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/changelog
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/postinst
+                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/postrm
+                    rsync -rp debian ${BUILD_DIR}
+                    mkdir -p ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
+                    rsync -rp ../hd4478-i2c/* ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
+                    dh clean
+                    dh build
+                    fakeroot dh binary
                     '''
                 }
 	        }

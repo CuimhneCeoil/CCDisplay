@@ -20,7 +20,14 @@ set -e
 
 
 case "$1" in
-    purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+    remove|upgrade)
+    	dkms uninstall hd44780-i2c/VERSION_STRING
+    	
+    	;;
+	purge)
+    	dkms uninstall hd44780-i2c/VERSION_STRING
+    	;;
+	failed-upgrade|abort-install|abort-upgrade|disappear)
     ;;
 
     *)
