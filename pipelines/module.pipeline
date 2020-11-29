@@ -38,7 +38,7 @@ pipeline {
                 '''
             }
         }
-        stage( "Package HD44780-i2c-${env.VERSION_STRING}" ) {
+        stage( "Package HD44780-i2c" ) {
             steps {
                
 	                sh '''
