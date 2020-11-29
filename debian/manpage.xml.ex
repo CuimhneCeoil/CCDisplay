@@ -56,9 +56,9 @@ man(1), man(7), http://www.tldp.org/HOWTO/Man-Page/
   <!ENTITY dhsection   "SECTION">
   <!-- TITLE should be something like "User commands" or similar (see
        http://www.tldp.org/HOWTO/Man-Page/q2.html). -->
-  <!ENTITY dhtitle     "cuimhne-plugin User Manual">
-  <!ENTITY dhucpackage "Cuimhne-plugin">
-  <!ENTITY dhpackage   "cuimhne-plugin">
+  <!ENTITY dhtitle     "hd44780-i2c User Manual">
+  <!ENTITY dhucpackage "Hd44780-i2c">
+  <!ENTITY dhpackage   "hd44780-i2c">
 ]>
 
 <refentry>

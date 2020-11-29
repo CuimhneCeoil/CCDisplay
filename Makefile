@@ -1,4 +1,4 @@
-VERSION:=$(shell cat debian/control | grep "^Version:" | cut -f2 -d' ')
+VERSION:=$(shell cat version.txt)
 
 .PHONY: all, clean, install, install-usr, update-debian
 
@@ -16,9 +16,9 @@ scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	echo "DEST_MODULE_LOCATION[0]=\"/kernel/drivers/auxdisplay\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	echo "AUTOINSTALL=\"yes\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
-all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf update-debian
+all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf 
 
-clean:
+clean: update-debian
 	rm -f scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
 install-usr:

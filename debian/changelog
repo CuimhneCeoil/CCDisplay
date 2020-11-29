@@ -1,5 +1,5 @@
-hd44780-i2c (VERSION_STRING) unstable; urgency=medium
+hd44780-i2c (1.0.0-1) unstable; urgency=medium
 
-  * Initial release 
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
 
- -- Claude N. Warren, Jr. <claude@xenei.com>  Sat, 11 Jul 2020 23:15:29 +0100
+ -- Claude N. Warren, Jr. <claude@xenei.com>  Sun, 29 Nov 2020 11:57:55 +0000
