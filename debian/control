@@ -10,6 +10,7 @@ Standards-Version: 4.1.3
 
 Package: hd44780-i2c
 Architecture: any
-Depends: dkms, i2c, ${shlibs:Depends}, ${misc:Depends}, 
+Depends: dkms, i2c, ${shlibs:Depends}, ${misc:Depends}
+Replaces: hd44780
 Description: Provides HD44780 over I2C on /dev/lcd?
  Provides HD44780 over I2C on /dev/lcd.
