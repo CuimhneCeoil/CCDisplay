@@ -9,10 +9,27 @@ pipeline {
     stages {
         stage('Clone Source') {
             steps {
-                deleteDir()
-                sh '''
-                    git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
-                '''
+                checkout([
+                	$class: 'GitSCM', 
+                	branches: [[name: '*/master']], 
+                	doGenerateSubmoduleConfigurations: false, 
+                	extensions: [
+                		[
+                			$class: 'CloneOption', 
+                			depth: 1, 
+                			noTags: false, 
+                			reference: '', 
+                			shallow: true
+            			]
+        			], 
+        			submoduleCfg: [], 
+        			userRemoteConfigs: [
+        				[
+        					credentialsId: 'pizero-build', 
+        					url: 'https://github.com/Claudenw/hd44780-i2c.git'
+    					]
+					]
+				])
                 env.VERSION_STRING = $(script: 'grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1' )
                 env.BUILD_DIR=hd44780-i2c-${env.VERSION_STRING}
                 mkdir -p ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
