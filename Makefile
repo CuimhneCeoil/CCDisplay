@@ -21,7 +21,7 @@ all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 clean:
 	rm -f scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
-install-usr:
+install-usr: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	install -d $(DESTDIR)/usr
 	for fn in `find scripts/usr -type d | sed 's+scripts/usr++g'`; do install -m 755 -d $(DESTDIR)/usr$$fn; done
 	for fn in `find scripts/usr -type f | sed 's+scripts/usr++g'`; do install -m 644 scripts/usr$$fn $(DESTDIR)/usr$$fn; done
