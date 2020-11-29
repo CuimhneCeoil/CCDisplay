@@ -40,14 +40,13 @@ pipeline {
         }
         stage( "Package HD44780-i2c-${env.VERSION_STRING}" ) {
             steps {
-                dir (${env.BUILD_DIR}) {
-                	
+               
 	                sh '''
 	                dh clean
 	                dh build
 	                fakeroot dh binary
 	                '''
-                }
+                
 	        }
         
             post {
