@@ -30,9 +30,9 @@ pipeline {
     					]
 					]
 				])
-                VERSION_STRING = $(script: 'grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1' )
-                BUILD_DIR = hd44780-i2c-${env.VERSION_STRING}
-                sh '''
+				sh '''
+                	env.VERSION_STRING = `grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1`
+                	env.BUILD_DIR = `echo hd44780-i2c-${env.VERSION_STRING}`
                 	mkdir -p ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
                 	mv hd44780-i2c ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
                 '''
