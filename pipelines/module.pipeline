@@ -35,7 +35,7 @@ pipeline {
                     sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/postrm
                     rsync -rp debian ${BUILD_DIR}
                     mkdir -p ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
-                    rsync -rp ../hd4478-i2c/* ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
+                    rsync -rp ../hd44780-i2c/* ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
                     dh clean
                     dh build
                     fakeroot dh binary
