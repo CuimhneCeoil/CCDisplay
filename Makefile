@@ -9,7 +9,7 @@ update-debian:
 	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/postrm
 	
 
-scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
+scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf:
 	echo "PACKAGE_NAME=\"hd44780-i2c\"" > scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	echo "PACKAGE_VERSION=\"$(VERSION)\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	echo "BUILT_MODULE_NAME[0]=\"hd44780-i2c\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
@@ -18,7 +18,7 @@ scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
 all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf 
 
-clean: update-debian
+clean:
 	rm -f scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
 install-usr:

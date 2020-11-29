@@ -9,6 +9,7 @@ pipeline {
     stages {
         stage('Clone Source') {
             steps {
+            	deleteDir()
                 checkout([
                 	$class: 'GitSCM', 
                 	branches: [[name: '*/master']], 
@@ -34,27 +35,63 @@ pipeline {
     					]
 					]
 				])
-				env.VERSION_STRING=$script( 'grep "VERSION" hd44780-i2c/Makefile | cut -d= -f2 | head -1')
-				env.BUILD_DIR="hd44780-i2c-${VERSION_STRING}"
-				sh '''
-                	mkdir -p ../${env.BUILD_DIR}/scripts/usr/src/${env.BUILD_DIR}
-                	mv hd44780-i2c ../${env.BUILD_DIR}/scripts/usr/src/${env.BUILD_DIR}
-                	rsync . ../${env.BUILD_DIR}
-                	echo ${env.VERSION_STRING} > ../${env.BUILD_DIR}/version.txt
-                '''
+				checkout([
+                	$class: 'GitSCM', 
+                	branches: [[name: '*/main']], 
+                	doGenerateSubmoduleConfigurations: false, 
+                	extensions: [
+                		[
+                			$class: 'CloneOption', 
+                			depth: 1, 
+                			noTags: false, 
+                			reference: '', 
+                			shallow: true
+            			],
+            			 [
+            			 	$class: 'RelativeTargetDirectory', 
+            			 	relativeTargetDir: 'hd44780-i2c-pkg'
+        			 	]
+        			], 
+        			submoduleCfg: [], 
+        			userRemoteConfigs: [
+        				[
+        					credentialsId: 'pizero-build', 
+        					url: 'https://github.com/Claudenw/hd44780-i2c-pkg.git'
+    					]
+					]
+				])
+				script {
+				    env.VERSION_STRING  = sh(script:'grep "VERSION" hd44780-i2c/Makefile | cut -f2 -d=', returnStdout: true).trim()
+				    env.BUILD_DIR="hd44780-i2c-${VERSION_STRING}"
+				    echo "Building ${env.VERSION_STRING } in ${env.BUILD_DIR }"
+				   
+				}
+			}
+		}
+		stage( "Prepare packaging" ) {
+			steps {
+				dir( "hd44780-i2c-pkg" ) {
+					sh '''
+	                	mkdir -p ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
+	                	mv ../hd44780-i2c ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
+	                	rsync -r * ../${BUILD_DIR}
+	                	echo ${VERSION_STRING} > ../${BUILD_DIR}/version.txt
+	                '''
+                }
+
             }
         }
         
         stage( "Package HD44780-i2c" ) {
             steps {
-               	dir( "${env.BUILD_DIR}" )
+               	dir( "${env.BUILD_DIR}" ) {
 	                sh '''
 	                make update-debian
 	                dh clean
 	                dh build
 	                fakeroot dh binary
 	                '''
-                
+                }
 	        }
         
             post {
