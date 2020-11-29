@@ -1,3 +1,6 @@
+def VERSION_STRING = "INVALID"
+def BUILD_DIR = "INVALID"
+
 pipeline {
      agent {
                 label 'pizero'
@@ -9,39 +12,25 @@ pipeline {
                 deleteDir()
                 sh '''
                     git clone --depth=1 https://github.com/Claudenw/hd44780-i2c.git ;
-                    git clone --depth=1 https://github.com/Claudenw/hd44780-i2c-pkg.git ;
                 '''
+                env.VERSION_STRING = $(script: 'grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1' )
+                env.BUILD_DIR=hd44780-i2c-${env.VERSION_STRING}
+                mkdir -p ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
+                mv hd44780-i2c ${env.BUILD_DIR}/scripts/usr/src/hd44780-i2c-${env.VERSION_STRING}
             }
         }
-        stage( "Prepare DKMS" ) {
+        stage( "Package HD44780-i2c-${env.VERSION_STRING}" ) {
             steps {
-                dir ("hd44780-i2c" ) {
-                    sh '''
-                    make dkms.conf 
-                    '''
-                }
-            }
-        }
-        stage( "Package HD44780-i2c" ) {
-            steps {
-                dir ("hd44780-i2c-pkg") {
-                    sh '''
-                    export VERSION_STRING=`grep "VERSION" ../hd44780-i2c/Makefile | cut -d= -f2 | head -1`
-                    export BUILD_DIR=../hd44780-i2c-${VERSION_STRING}
-                    mkdir ${BUILD_DIR}
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/control
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/changelog
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/postinst
-                    sed -i "s/VERSION_STRING/${VERSION_STRING}/g" debian/postrm
-                    rsync -rp debian ${BUILD_DIR}
-                    mkdir -p ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
-                    rsync -rp ../hd44780-i2c/* ${BUILD_DIR}/scripts/usr/src/hd44780-i2c-${VERSION_STRING}
-                    dh clean
-                    dh build
-                    fakeroot dh binary
-                    '''
+                dir (${env.BUILD_DIR}) {
+                	
+	                sh '''
+	                dh clean
+	                dh build
+	                fakeroot dh binary
+	                '''
                 }
 	        }
+        
             post {
                 success {
                     archiveArtifacts artifacts: 'hd44780-i2c-*.deb', followSymlinks: false, onlyIfSuccessful: true    
