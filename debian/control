@@ -1,4 +1,5 @@
 Package: hd44780-i2c
+Source: hd44780-i2c
 Section: kernel
 Priority: optional
 Standards-Version: 3.9.5
