@@ -62,7 +62,7 @@ pipeline {
 				])
 				script {
 				    env.VERSION_STRING  = sh(script:'grep "VERSION" hd44780-i2c/Makefile | cut -f2 -d=', returnStdout: true).trim()
-				    env.BUILD_DIR="hd44780-i2c-${VERSION_STRING}"
+				    env.BUILD_DIR="hd44780-i2c-${env.VERSION_STRING}"
 				    echo "Building ${env.VERSION_STRING } in ${env.BUILD_DIR }"
 				   
 				}
@@ -99,7 +99,7 @@ pipeline {
     }
     post {
         success {
-            archiveArtifacts artifacts: 'hd44780-i2c-*.deb', followSymlinks: false, onlyIfSuccessful: true    
+            archiveArtifacts artifacts: 'hd44780-i2c*.deb', followSymlinks: false, onlyIfSuccessful: true    
             build job: 'Package_Index', parameters: [string(name: 'project', value: 'hd44780-i2c-pkg'), string(name: 'files', value: '*.deb')]
         }
     }
