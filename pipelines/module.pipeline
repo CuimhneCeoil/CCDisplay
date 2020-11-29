@@ -73,7 +73,7 @@ pipeline {
 				dir( "hd44780-i2c-pkg" ) {
 					sh '''
 	                	mkdir -p ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
-	                	mv ../hd44780-i2c ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
+	                	mv ../hd44780-i2c/* ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
 	                	rsync -r * ../${BUILD_DIR}
 	                	echo ${VERSION_STRING} > ../${BUILD_DIR}/version.txt
 	                '''
