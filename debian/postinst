@@ -19,6 +19,7 @@ set -e
 case "$1" in
     configure)
         dkms build hd44780-i2c/VERSION_STRING
+        dkms install hd44780-i2c/VERSION_STRING
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
