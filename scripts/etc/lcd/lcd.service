@@ -1,0 +1,12 @@
+[Unit]
+Description=Enable /dev/lcd0
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/etc/lcd/lcd_setup.sh start
+ExecStop=/etc/lcd/lcd_setup.sh stop
+
+[Install]
+WantedBy=basic.target
+
