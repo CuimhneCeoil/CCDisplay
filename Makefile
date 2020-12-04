@@ -2,6 +2,8 @@ VERSION:=$(shell cat version.txt)
 
 .PHONY: all, clean, install, install-usr, install-etc, update-debian
 
+all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf 
+
 update-debian:
 	sed -i "s/^Version:.*$$/Version: $(VERSION)/g" debian/control
 	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/changelog
