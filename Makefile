@@ -18,7 +18,7 @@ scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf:
 	echo "DEST_MODULE_LOCATION[0]=\"/kernel/drivers/auxdisplay\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	echo "AUTOINSTALL=\"yes\"" >> scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
 	
-all: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf 
+
 
 clean:
 	rm -f scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
@@ -33,4 +33,4 @@ install-etc:
 	for fn in `find scripts/etc -type d | sed 's+scripts/etc++g'`; do install -m 755 -d $(DESTDIR)/etc$$fn; done
 	for fn in `find scripts/etc -type f | sed 's+scripts/etc++g'`; do install -m 644 scripts/etc$$fn $(DESTDIR)/etc$$fn; done
 
-install:  install-usr, install-etc	
+install:  install-usr install-etc	
