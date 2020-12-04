@@ -13,4 +13,7 @@ Architecture: any
 Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
 Replaces: hd44780
 Description: Provides HD44780 over I2C on /dev/lcd?
- Provides HD44780 over I2C on /dev/lcd.
+ Provides HD44780 over I2C on /dev/lcd. 
+ Enables dtparam=i2c_arm=on in the /boot/config.txt file.
+ adds and enables lcd.service to systemctl
+  
