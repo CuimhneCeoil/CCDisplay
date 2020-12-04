@@ -86,7 +86,7 @@ pipeline {
             steps {
                	dir( "${env.BUILD_DIR}" ) {
 	                sh '''
-	                update-debian
+	                make update-debian
 	                dh clean
 	                dh build
 	                fakeroot dh binary
