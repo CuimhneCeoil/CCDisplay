@@ -1,6 +1,7 @@
 #!/bin/sh -x
 # prerm script for hd44780-i2c
 
+echo $0 $1
 set -e
 
 # summary of how this script can be called:
@@ -14,13 +15,13 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
+echo "Preremoval: $1"
 
 case "$1" in
     remove|upgrade|deconfigure)
         systemctl stop lcd
         systemctl disable lcd
         dkms uninstall hd44780-i2c/VERSION_STRING
-    ;;
     ;;
 
     failed-upgrade)
