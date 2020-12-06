@@ -1,7 +1,6 @@
-#!/bin/sh -x
+#!/bin/sh
 # prerm script for hd44780-i2c
 
-echo $0 $1
 set -e
 
 # summary of how this script can be called:
