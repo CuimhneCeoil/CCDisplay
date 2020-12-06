@@ -25,6 +25,7 @@ case "$1" in
     	
     	;;
 	purge)
+        rm-f "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
     	rm -f /etc/systemd/system/lcd.service
     	rm -r /etc/lcd
     	;;

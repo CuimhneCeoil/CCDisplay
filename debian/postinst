@@ -24,6 +24,7 @@ case "$1" in
         dtparam i2c_arm=on
         modprobe i2c_dev
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
+        ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
         chmod ugo+x /etc/lcd/lcd_setup.sh
         systemctl start lcd
         systemctl enable lcd
