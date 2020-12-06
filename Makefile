@@ -9,6 +9,8 @@ update-debian:
 	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/changelog
 	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/postinst
 	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/postrm
+	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/preinst
+	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/prerm
 	
 
 scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf:
