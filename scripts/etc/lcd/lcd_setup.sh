@@ -1,5 +1,5 @@
 #!/bin/bash
-dir=dirname $0
+dir=`dirname $0`
 msg=`cat ${dir}/message.txt`
 case $1 in
     "start")
@@ -16,8 +16,11 @@ case $1 in
         printf "\e[2J\e[H${msg}Shutdown" > /dev/${dev}
         echo 0x27 > /sys/class/i2c-adapter/i2c-1/delete_device
         ;;
-    '*')
+    *)
         echo "$0 [start|stop]"
+        echo "Message: ${msg}"
+        echo "--------------------"
+        echo Message may be changed by editing ${dir}/message.txt
         ;;
 esac
 
