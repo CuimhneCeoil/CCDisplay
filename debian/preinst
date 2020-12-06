@@ -18,7 +18,6 @@ case "$1" in
     ;;
     
     upgrade)
-    	export VERSION_STRING=`grep "VERSION" /usr/src//hd44780-i2c/Makefile | cut -d= -f2` | tail -1
     ;;
 
     abort-upgrade)
