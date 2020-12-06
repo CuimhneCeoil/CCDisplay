@@ -20,13 +20,12 @@ set -e
 
 case "$1" in
     remove|upgrade)
-    	rm /etc/systemd/system/lcd.service
+    	rm -f /etc/systemd/system/lcd.service
     	
     	
     	;;
 	purge)
-    	rm /etc/systemd/system/lcd.service
-    	dkms uninstall hd44780-i2c/VERSION_STRING
+    	rm -f /etc/systemd/system/lcd.service
     	rm -r /etc/lcd
     	;;
 	failed-upgrade|abort-install|abort-upgrade|disappear)

@@ -15,8 +15,6 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-echo "Preremoval: $1"
-
 case "$1" in
     remove|upgrade|deconfigure)
         systemctl stop lcd
