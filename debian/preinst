@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 # preinst script for hd44780-i2c
 
 
