@@ -10,7 +10,7 @@ Homepage: https://github.com/Claudenw/hd44780-i2c
 
 Package: hd44780-i2c
 Architecture: any
-Depends: dkms, ${shlibs:Depends}, ${misc:Depends}
+Depends: dkms, ${shlibs:Depends}, ${misc:Depends}k raspberrypi-kernel-headers
 Replaces: hd44780
 Description: Provides HD44780 over I2C on /dev/lcd?
  Provides HD44780 over I2C on /dev/lcd. 

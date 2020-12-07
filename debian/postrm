@@ -21,8 +21,6 @@ set -e
 case "$1" in
     remove|upgrade)
     	rm -f /etc/systemd/system/lcd.service
-    	
-    	
     	;;
 	purge)
         rm-f "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
