@@ -16,6 +16,10 @@ case "$1" in
     ;;
     
     upgrade)
+        if [ systemctl is-active --quiet lcd ]
+        then 
+            systemctl stop lcd
+        fi
     ;;
 
     abort-upgrade)

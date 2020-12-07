@@ -16,7 +16,10 @@ set -e
 
 case "$1" in
     remove|upgrade|deconfigure)
-        systemctl stop lcd
+        if [ systemctl is-active --quiet lcd ]
+        then 
+            systemctl stop lcd
+        fi
         systemctl disable lcd
         dkms uninstall hd44780-i2c/VERSION_STRING
     ;;
