@@ -269,6 +269,12 @@ static void hd44780_handle_new_line(struct hd44780 *lcd)
 {
     struct hd44780_geometry *geo = lcd->geometry;
 
+    // clear to end of line
+    int pos;
+    for (pos=lcd->pos.col;pos<geo->cols;pos++) {
+        hd44780_write_data(lcd, ' ');
+    }
+
     lcd->pos.row = (lcd->pos.row + 1) % geo->rows;
     lcd->pos.col = 0;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
