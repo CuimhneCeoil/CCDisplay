@@ -16,7 +16,8 @@ set -e
 
 case "$1" in
     remove|upgrade|deconfigure)
-        if [ `systemctl is-active --quiet lcd` ]
+    	systemctl is-active --quiet lcd
+        if [ $? -ne 0 ]
         then 
             systemctl stop lcd
         fi
