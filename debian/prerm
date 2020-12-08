@@ -27,7 +27,7 @@ case "$1" in
         fi
         if [ `dkms status hd44780-i2c/VERSION_STRING | wc -l` -gt 0 ]
         then
-            dkms uninstall hd44780-i2c/VERSION_STRING --all
+            dkms remove hd44780-i2c/VERSION_STRING --all
         fi
     ;;
 
