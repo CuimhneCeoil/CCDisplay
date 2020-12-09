@@ -319,7 +319,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     // adjust min col to be 0 based
     min_col = min( start, 1 ) - 1;
     // adjust max_col to be excluded value;
-    max_col = min( end, geo->cols );
+    max_col = min( end, geo->cols-1 ) + 1;
 
     start_addr = geo->start_addrs[lcd->pos.row]+min_col;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
