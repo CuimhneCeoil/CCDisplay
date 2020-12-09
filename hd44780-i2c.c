@@ -46,7 +46,8 @@ struct hd44780 {
     bool backlight;
     bool cursor_blink;
     bool cursor_display;
-
+    /* during initializaion dirty is set true so that display of initialization output
+     will be cleared before first write. */
     bool dirty;
 
     struct mutex lock;
@@ -947,6 +948,9 @@ ATTRIBUTE_GROUPS(hd44780_device);
 static int hd44780_file_open(struct inode *inode, struct file *filp)
 {
     filp->private_data = container_of(inode->i_cdev, struct hd44780, cdev);
+
+    printk (KERN_DEBUG "opening %p on %p", filp->private_data, filp );
+
     return 0;
 }
 
@@ -954,6 +958,7 @@ static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
     struct hd44780 *lcd = filp->private_data;
     hd44780_flush(lcd);
+    printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
     return 0;
 }
 
@@ -965,8 +970,10 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     lcd = filp->private_data;
     n = min(count, (size_t)BUF_SIZE);
 
+
     // TODO: Consider using an interruptible lock
     mutex_lock(&lcd->lock);
+    printk (KERN_DEBUG "writing %i bytes to %p", n, lcd );
 
     // TODO: Support partial writes during errors?
     if (copy_from_user(lcd->buf, buf, n)) {
@@ -975,6 +982,8 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     }
 
     hd44780_write(lcd, lcd->buf, n);
+    // TODO flush ere?
+    printk (KERN_DEBUG "done writing %i bytes to %p", n, lcd );
 
     mutex_unlock(&lcd->lock);
 
