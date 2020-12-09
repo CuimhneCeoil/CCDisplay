@@ -968,17 +968,16 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     size_t written = 0;
 
     lcd = filp->private_data;
-    n = min(count, (size_t)BUF_SIZE);
 
     mutex_lock(&lcd->lock);
     // TODO: Consider using an interruptible lock
-    printk (KERN_DEBUG "writing %i bytes to %p", n, lcd );
+    printk (KERN_DEBUG "writing %i bytes to %p", count, lcd );
 
     while (written<count) {
         n = min( count-written, (size_t)BUF_SIZE);
 
        // TODO: Support partial writes during errors?
-       if (copy_from_user(lcd->buf, buf, n)) {
+       if (copy_from_user(lcd->buf, buf+written, n)) {
            mutex_unlock(&lcd->lock);
            return -EFAULT;
        }
@@ -989,11 +988,11 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     if (lcd->is_in_esc_seq) {
         hd44780_flush_esc_seq(lcd);
     }
-    printk (KERN_DEBUG "done writing %i bytes to %p", n, lcd );
+    printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
 
     mutex_unlock(&lcd->lock);
 
-    return n;
+    return written;
 }
 
 static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
