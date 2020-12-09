@@ -57,11 +57,12 @@ struct hd44780 {
 void hd44780_write(struct hd44780 *, const char *, size_t);
 void hd44780_init_lcd(struct hd44780 *);
 void hd44780_print(struct hd44780 *, const char *);
-void hd44780_flush(struct hd44780 *);
 void hd44780_set_geometry(struct hd44780 *, struct hd44780_geometry *);
 void hd44780_set_backlight(struct hd44780 *, bool);
 void hd44780_set_cursor_blink(struct hd44780 *, bool);
 void hd44780_set_cursor_display(struct hd44780 *, bool);
+
+static void vt100_clear_line( struct hd44780 *lcd, int start, int end );
 
 extern struct hd44780_geometry *hd44780_geometries[];
 
@@ -209,6 +210,10 @@ static void hd44780_write_instruction(struct hd44780 *lcd, u8 data)
     udelay(37);
 }
 
+/*
+ * writes byte and advances the characer position in the display
+ * but not in the lcd object.
+ */
 static void hd44780_write_data(struct hd44780 *lcd, u8 data)
 {
     u8 h = (data >> 4) & 0x0F;
@@ -220,6 +225,10 @@ static void hd44780_write_data(struct hd44780 *lcd, u8 data)
     udelay(37 + 4);
 }
 
+/*
+ * writes byte and advances, advances the character position in the display
+ * and adjusts the col, row properly
+ */
 static void hd44780_write_char(struct hd44780 *lcd, char ch)
 {
     struct hd44780_geometry *geo = lcd->geometry;
@@ -250,37 +259,18 @@ static void hd44780_clear_display(struct hd44780 *lcd)
     lcd->pos.col = 0;
 }
 
-static void hd44780_clear_line(struct hd44780 *lcd)
-{
-    struct hd44780_geometry *geo;
-    int start_addr, col;
-
-    geo = lcd->geometry;
-    start_addr = geo->start_addrs[lcd->pos.row];
-
-    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
-
-    for (col = 0; col < geo->cols; col++)
-        hd44780_write_data(lcd, ' ');
-
-    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
-}
-
 static void hd44780_handle_new_line(struct hd44780 *lcd)
 {
     struct hd44780_geometry *geo = lcd->geometry;
 
     // clear to end of line
-    int pos;
-    for (pos=lcd->pos.col;pos<geo->cols;pos++) {
-        hd44780_write_data(lcd, ' ');
-    }
+    vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
 
     lcd->pos.row = (lcd->pos.row + 1) % geo->rows;
     lcd->pos.col = 0;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
         | geo->start_addrs[lcd->pos.row]);
-    hd44780_clear_line(lcd);
+    vt100_clear_line(lcd, 0, lcd->geometry->cols);
 }
 
 static void hd44780_handle_carriage_return(struct hd44780 *lcd)
@@ -308,6 +298,36 @@ static void hd44780_flush_esc_seq(struct hd44780 *lcd)
     hd44780_write(lcd, lcd->esc_seq_buf.buf, lcd->esc_seq_buf.length);
 
     hd44780_leave_esc_seq(lcd);
+}
+/*
+ * clears character from start to end inclusive
+ * start and end are 1 based like vt100 commands
+ */
+static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
+    struct hd44780_geometry *geo;
+    int min_col;
+    int max_col;
+    int col;
+    int start_addr;
+
+    geo = lcd->geometry;
+    if (start > end || start >= geo->cols)
+    {
+        return;
+    }
+
+    // adjust min col to be 0 based
+    min_col = min( start, 1 ) - 1;
+    // adjust max_col to be excluded value;
+    max_col = min( end, geo->cols );
+
+    start_addr = geo->start_addrs[lcd->pos.row]+min_col;
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
+
+    for (col = min_col; col < max_col; col++)
+        hd44780_write_data(lcd, ' ');
+    start_addr = geo->start_addrs[lcd->pos.row]+lcd->pos.col;
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
 }
 
 /*
@@ -365,7 +385,7 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     case 'C':
     case 'D':
         if (num2 > -1) {
-            // Not a valid escape sequence, shoud not have second number
+            // Not a valid escape sequence, should not have second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", idx );
             hd44780_flush_esc_seq(lcd);
             return 0;
@@ -445,29 +465,20 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
     case 'K':
         if (num2 > -1) {
-            // Not a valid escape sequence, shoud not have second number
+            // Not a valid escape sequence, should not have second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", idx );
             hd44780_flush_esc_seq(lcd);
             return 0;
         }
         if (num1 <=0) {
             // Clear line from cursor right
-            for (pos=lcd->pos.col;pos<geo->cols;pos++) {
-                hd44780_write_data(lcd, ' ');
-            }
+            vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
         } else if (num1 == 1) {
             //Clear line from cursor left
-            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
-            for (pos=lcd->pos.col;pos<lcd->pos.col;pos++) {
-                hd44780_write_data(lcd, ' ');
-            }
-
+            vt100_clear_line( lcd, 0, lcd->pos.col);
         } else if (num1 == 2){
             // Clear entire line
-            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
-            for (pos=lcd->pos.col;pos<geo->cols;pos++) {
-                hd44780_write_data(lcd, ' ');
-            }
+            vt100_clear_line( lcd, 0, lcd->geometry->cols);
         } else {
             printk (KERN_INFO "Not a valid escape sequence, first number rang [0-2]: %s \n", idx );
             hd44780_flush_esc_seq(lcd);
@@ -537,13 +548,6 @@ static int hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
         }
     }
     return 0;
-}
-
-
-void hd44780_flush(struct hd44780 *lcd)
-{
-    while (lcd->is_in_esc_seq)
-        hd44780_flush_esc_seq(lcd);
 }
 
 static void hd44780_handle_esc_seq_char(struct hd44780 *lcd, char ch)
