@@ -957,7 +957,6 @@ static int hd44780_file_open(struct inode *inode, struct file *filp)
 static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
     struct hd44780 *lcd = filp->private_data;
-    hd44780_flush(lcd);
     printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
     return 0;
 }
@@ -966,23 +965,30 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 {
     struct hd44780 *lcd;
     size_t n;
+    size_t written = 0;
 
     lcd = filp->private_data;
     n = min(count, (size_t)BUF_SIZE);
 
-
-    // TODO: Consider using an interruptible lock
     mutex_lock(&lcd->lock);
+    // TODO: Consider using an interruptible lock
     printk (KERN_DEBUG "writing %i bytes to %p", n, lcd );
 
-    // TODO: Support partial writes during errors?
-    if (copy_from_user(lcd->buf, buf, n)) {
-        mutex_unlock(&lcd->lock);
-        return -EFAULT;
-    }
+    while (written<count) {
+        n = min( count-written, (size_t)BUF_SIZE);
 
-    hd44780_write(lcd, lcd->buf, n);
-    // TODO flush ere?
+       // TODO: Support partial writes during errors?
+       if (copy_from_user(lcd->buf, buf, n)) {
+           mutex_unlock(&lcd->lock);
+           return -EFAULT;
+       }
+
+       hd44780_write(lcd, lcd->buf, n);
+       written += n;
+    }
+    if (lcd->is_in_esc_seq) {
+        hd44780_flush_esc_seq(lcd);
+    }
     printk (KERN_DEBUG "done writing %i bytes to %p", n, lcd );
 
     mutex_unlock(&lcd->lock);
