@@ -22,7 +22,7 @@ Supported control codes:
 Supported VT100 terminal control escape sequences:
 * `<ESC>[2J` - erase screen
 * `<ESC>[H` - cursor home
-* `<ESC>[row;colH` - cursor to row, col (zero index origin)
+* `<ESC>[row;colH` - moves the active position to the position specified by the parameters. This sequence has two parameter values, the first specifying the row position and the second specifying the column position. A parameter value of zero or one for the first or second parameter moves the active position to the first row or column in the display, respectively. The default condition with no parameters present is equivalent to a cursor to home action
 * `<ESC>[nA` - Move cursor up n lines
 * `<ESC>[nB` - Move cursor down n lines
 * `<ESC>[nC` - Move cursor right n characters

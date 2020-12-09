@@ -397,16 +397,20 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     case 'H':
         if (num1 > -1)
         {
-            if (num2 == -1)
+            if (num1 <= 1)
             {
-                num2 = 0;
+                num1 = 1;
+            }
+            if (num2 <= 1 )
+            {
+                num2 = 1;
             }
         } else {
-            num1 = 0;
-            num2 = 0;
+            num1 = 1;
+            num2 = 1;
         }
-        lcd->pos.row = num1 % geo->rows;
-        lcd->pos.col = num2 % geo->cols;
+        lcd->pos.row = (num1-1) % geo->rows;
+        lcd->pos.col = (num2-1) % geo->cols;
 
         if (lcd->pos.row == 0 && lcd->pos.col == 0) {
             hd44780_write_instruction(lcd, HD44780_RETURN_HOME);
