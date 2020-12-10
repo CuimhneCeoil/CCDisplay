@@ -309,7 +309,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     int col;
     int start_addr;
 
-    printk (KERN_INFO "vt100_clear_line( %i, %i )", start, end );
+    printk (KERN_INFO "vt100_clear_line( %i, %i ) -cursor pos: %i %i", start, end, lcd->pos.row, lcd->pos.col );
 
     geo = lcd->geometry;
     if (start > end || start >= geo->cols || start<0)
@@ -329,7 +329,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
         hd44780_write_data(lcd, ' ');
     start_addr = geo->start_addrs[lcd->pos.row]+lcd->pos.col;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
-    printk (KERN_INFO "vt100_clear_line FINISHED" );
+    printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col ); );
 }
 
 /*
