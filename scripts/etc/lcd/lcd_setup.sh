@@ -9,7 +9,7 @@ case $1 in
         echo hd44780 0x27 > /sys/class/i2c-adapter/i2c-1/new_device
         dev=`ls /sys/class/hd44780/`
         sleep 1
-        chmod ugo+w /dev/${dev}
+        udevadm trigger /dev/${dev}
         printf "\e[2J\e[H${msg}Startup" > /dev/${dev}
         echo "0" > /sys/class/hd44780/${dev}/cursor_blink
         echo "0" > /sys/class/hd44780/${dev}/cursor_display
