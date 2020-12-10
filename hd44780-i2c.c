@@ -301,7 +301,7 @@ static void hd44780_flush_esc_seq(struct hd44780 *lcd)
 }
 /*
  * clears character from start to end inclusive
- * start and end are 0 based
+ * start and end are 0 based.  Does not move the cursor
  */
 static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     struct hd44780_geometry *geo;
@@ -329,7 +329,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
         hd44780_write_data(lcd, ' ');
     start_addr = geo->start_addrs[lcd->pos.row]+lcd->pos.col;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
-    printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col ); );
+    printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col ); 
 }
 
 /*
@@ -341,7 +341,6 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     int num1=-1;
     int num2=-1;
     struct hd44780_geometry *geo = lcd->geometry;
-    int pos;
 
     // skip the '['
     idx++;
@@ -475,19 +474,20 @@ static int hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         if (num1 <=0) {
             // Clear line from cursor right
             vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
+            return 1;
         } else if (num1 == 1) {
             //Clear line from cursor left
             vt100_clear_line( lcd, 0, lcd->pos.col);
+            return 1;
         } else if (num1 == 2){
             // Clear entire line
             vt100_clear_line( lcd, 0, lcd->geometry->cols);
+            return 1;
         } else {
             printk (KERN_INFO "Not a valid escape sequence, first number rang [0-2]: %s \n", idx );
             hd44780_flush_esc_seq(lcd);
             return 0;
         }
-        // reposition
-        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row+lcd->pos.col]);
         break;
     case 'm':
         if (num2 > -1) {
@@ -966,7 +966,6 @@ static int hd44780_file_open(struct inode *inode, struct file *filp)
 
 static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
-    struct hd44780 *lcd = filp->private_data;
     printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
     return 0;
 }
