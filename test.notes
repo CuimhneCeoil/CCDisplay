@@ -1,0 +1,23 @@
+sudo sysctl kernel.printk=7
+
+sudo chmod ugo+w /sys/class/hd44780/lcd0/cursor_*
+echo 1 > /sys/class/hd44780/lcd0/cursor_blink
+
+
+
+printf "\e[H\e[2JDelete to EOL\n" > /dev/lcd0
+printf "12345678901234567890" > /dev/lcd0
+printf "1234567890123456789\e[9D" > /dev/lcd0
+printf "\e[K" > /dev/lcd0
+
+
+printf "\e[H\e[2JDelete to BOL\n" > /dev/lcd0
+printf "12345678901234567890" > /dev/lcd0
+printf "1234567890123456789\e[9D" > /dev/lcd0
+printf "\e[1K" > /dev/lcd0
+
+printf "\e[H\e[2JDelete Line\n" > /dev/lcd0
+printf "12345678901234567890" > /dev/lcd0
+printf "1234567890123456789\e[9D" > /dev/lcd0
+printf "\e[2K" > /dev/lcd0
+
