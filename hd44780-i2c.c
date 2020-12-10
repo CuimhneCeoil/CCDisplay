@@ -378,6 +378,8 @@ static int parse_number( const char* idx, int length )
 }
 /*
 VT100 sequence buffer parser
+
+position documented in https://vt100.net/docs/vt100-ug/chapter3.html
 */
 static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     char* idx= lcd->esc_seq_buf.buf;
@@ -421,10 +423,10 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         }
     }
     switch( *idx ) {
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
+    case 'A': // up
+    case 'B': // down
+    case 'C': // right
+    case 'D': // left
         if (num2 > -1) {
             // Not a valid escape sequence, should not have second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
@@ -452,21 +454,21 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         recalc_pos( lcd );
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[lcd->pos.row] + lcd->pos.col));
         break;
-    case 'H':
-        if (num1 > -1)
-        {
-            if (num1 <= 1)
-            {
-                num1 = 1;
-            }
-            if (num2 <= 1 )
-            {
-                num2 = 1;
-            }
-        } else {
-            num1 = 1;
-            num2 = 1;
+    case 'E':
+        if (num1 > -1) {
+            printk (KERN_INFO "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf );
+            hd44780_flush_esc_seq(lcd);
+            return;
         }
+        lcd->pos.row++;
+        lcd->pos.col=0;
+        recalc_pos( lcd );
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
+        break;
+
+    case 'H': // positioning -1 & 0 for row or column = 1
+        num1 = num1 <= 1 ? 1 : num1;
+        num2 = num2 <= 1 ? 1 : num2;
         lcd->pos.row = (num1-1);
         lcd->pos.col = (num2-1);
         recalc_pos( lcd );
@@ -477,7 +479,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         }
         break;
 
-    case 'J':
+    case 'J': // clear line
         num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
