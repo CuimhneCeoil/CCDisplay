@@ -451,7 +451,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
 
     case 'J':
-        num1 = num1 < 0 ? 0 : num1
+        num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
@@ -577,7 +577,7 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
         ch = buf[i];
 
         if (lcd->is_in_esc_seq) {
-            hd44780_parse_vt100(ch, lcd)
+            hd44780_parse_vt100(ch, lcd);
         } else {
             switch (ch) {
             case '\r':
