@@ -301,12 +301,15 @@ static void hd44780_leave_esc_seq(struct hd44780 *lcd)
  */
 static void hd44780_flush_esc_seq(struct hd44780 *lcd)
 {
+    int idx;
+    printk (KERN_INFO "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
     /* Write \e that initiated current esc seq */
     hd44780_write_char(lcd, '\e');
 
     /* Flush current esc seq to display*/
-    lcd->is_in_esc_seq = false;
-    hd44780_write(lcd, lcd->esc_seq_buf.buf, lcd->esc_seq_buf.length);
+    for (idx=0;idx<lcd->esc_seq_buf.length;idx++) {
+        hd44780_write_char(lcd, lcd->esc_seq_buf.buf[idx]);
+    }
 
     /* clear the buffer */
     hd44780_leave_esc_seq(lcd);
@@ -359,7 +362,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     numlen=strspn( idx, "0123456789");
     if (numlen)
     {
-        if (numlen>1)
+        if (numlen>2)
         {
             // first number too long
             printk (KERN_INFO "first number too long: %s \n", lcd->esc_seq_buf.buf );
