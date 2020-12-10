@@ -462,7 +462,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             if (lcd->pos.row < geo->rows) {
                 int prev_row = lcd->pos.row;
                 lcd->pos.row++;
-                for (;lcd->pos.row<geo->rows;lcd->pos++)
+                for (;lcd->pos.row<geo->rows;lcd->pos.row++)
                 {
                     vt100_clear_line( lcd, 0, geo->cols );
                 }
