@@ -21,7 +21,7 @@ case "$1" in
         then 
             systemctl stop lcd
         fi
-        if [ -f /etc/lcd/lcd.service ]
+        if [ -f /etc/systemd/system/lcd.service ]
         then
             systemctl disable lcd
         fi
