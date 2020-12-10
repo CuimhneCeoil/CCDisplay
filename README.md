@@ -12,24 +12,28 @@ There are no imposed limitations on number of concurrently attached devices. In 
 Multiple LCD geometries are supported (20x4, 16x8 and 8x1) and it's trivial to add new ones if needed.
 
 Supported escape sequences:
-* `\r` - carriage return
-* `\n` - line feed (new line)
+* `\r` - Carriage return
+* `\n` - Line feed (new line)
 
 Supported control codes:
-* `Ctrl-S`/`0x13` - backlight off
-* `Ctrl-Q`/`0x11` - backlight on
+* `Ctrl-S`/`0x13` - Backlight off
+* `Ctrl-Q`/`0x11` - Backlight on
 
 Supported VT100 terminal control escape sequences:
-* `<ESC>[2J` - erase screen
+* `<ESC>[nJ` - Erase in display. 
+    * n=0 or not specified - Erase from the active position to the end of the screen, inclusive (default)
+    * n=1 - Erase from start of the screen to the active position, inclusive
+    * n=2 - Erase all of the display – all lines are erased, changed to single-width, and the cursor does not move.
 * `<ESC>[H` - cursor home
 * `<ESC>[row;colH` - moves the active position to the position specified by the parameters. This sequence has two parameter values, the first specifying the row position and the second specifying the column position. A parameter value of zero or one for the first or second parameter moves the active position to the first row or column in the display, respectively. The default condition with no parameters present is equivalent to a cursor to home action
 * `<ESC>[nA` - Move cursor up n lines
 * `<ESC>[nB` - Move cursor down n lines
 * `<ESC>[nC` - Move cursor right n characters
 * `<ESC>[nD` - Move cursor left n characters
-* `<ESC>[K`/`<ESC>[0K` -Clear line from cursor right
-* `<ESC>[1K` - Clear line from cursor left
-* `<ESC>[2K` - Clear entire line
+* `<ESC>[nK` - Clear line from cursor.
+    * n=0 or not specified - Clear line from cursor right
+    * n=1 - Clear line from cursor left
+    * n=2 - Clear entire line
 
 **Note**: if column or row is beyond the display it the position will wrap around, it does not scroll.
 

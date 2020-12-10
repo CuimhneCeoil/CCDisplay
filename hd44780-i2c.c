@@ -244,6 +244,10 @@ static void hd44780_write_char(struct hd44780 *lcd, char ch)
     }
 }
 
+/**
+ * Calls the hd4780 clear display which positions the cursor back to 0,0
+ * so we adjust the lcd->pos.row and lcd->pos.col accordingly
+ */
 static void hd44780_clear_display(struct hd44780 *lcd)
 {
     hd44780_write_instruction(lcd, HD44780_CLEAR_DISPLAY);
@@ -447,21 +451,43 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
 
     case 'J':
-        if (num1 == 2) {
-            if (num2 == -1) {
-                // Clear screen
+        num1 = num1 < 0 ? 0 : num1
+        if (num2 != -1) {
+            // Not a valid escape sequence, J has second number
+            printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
+            hd44780_flush_esc_seq(lcd);
+        } else if (num1 == 0) {
+            // clear to end of screen
+            vt100_clear_line( lcd, lcd->pos.col, geo->cols );
+            if (lcd->pos.row < geo->rows) {
                 int prev_row = lcd->pos.row;
-                int prev_col = lcd->pos.col;
-                hd44780_clear_display(lcd);
-                hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
-            } else {
-                // Not a valid escape sequence, J has second number
-                printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
-                hd44780_flush_esc_seq(lcd);
+                lcd->pos.row++
+                for (;lcd->pos.row<geo->rows;lcd->pos++)
+                {
+                    vt100_clear_line( lcd, 0, geo->cols );
+                }
+                lcd->pos.row = prev_row;
             }
+        } else if (num1 == 1) {
+            //clear from beginning of screen
+            vt100_clear_line( lcd, 0, lcd->pos.col )
+            if (lcd->pos.row > 0){
+                int prev_row = lcd->pos.row;
+                for (lcd->pos.row=0;lcd->pos.row<prev_row;lcd->pos.row++)
+                {
+                    vt100_clear_line( lcd, 0, geo->cols );
+                }
+                lcd->pos.row = prev_row;
+            }
+        } else if (num1 == 2) {
+            // Clear screen
+            int prev_row = lcd->pos.row;
+            int prev_col = lcd->pos.col;
+            hd44780_clear_display(lcd);
+            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
         } else {
-            // Not a valid escape sequence, only 2J is supported
-            printk (KERN_INFO "Not a valid escape sequence, only 2J supported: %s \n", lcd->esc_seq_buf.buf );
+            // Not a valid escape sequence, only [0-2] is supported
+            printk (KERN_INFO "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf );
             hd44780_flush_esc_seq(lcd);
         }
         break;
