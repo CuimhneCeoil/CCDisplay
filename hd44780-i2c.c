@@ -461,7 +461,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             vt100_clear_line( lcd, lcd->pos.col, geo->cols );
             if (lcd->pos.row < geo->rows) {
                 int prev_row = lcd->pos.row;
-                lcd->pos.row++
+                lcd->pos.row++;
                 for (;lcd->pos.row<geo->rows;lcd->pos++)
                 {
                     vt100_clear_line( lcd, 0, geo->cols );
@@ -470,7 +470,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             }
         } else if (num1 == 1) {
             //clear from beginning of screen
-            vt100_clear_line( lcd, 0, lcd->pos.col )
+            vt100_clear_line( lcd, 0, lcd->pos.col );
             if (lcd->pos.row > 0){
                 int prev_row = lcd->pos.row;
                 for (lcd->pos.row=0;lcd->pos.row<prev_row;lcd->pos.row++)
