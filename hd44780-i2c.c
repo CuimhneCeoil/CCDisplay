@@ -16,6 +16,9 @@
 
 #define BUF_SIZE        64
 #define ESC_SEQ_BUF_SIZE    16
+#define MAX_VT100_FIRST_NUMBER 2
+#define MAX_VT100_SECOND_NUMBER 2
+
 
 struct hd44780_geometry {
     int cols;
@@ -225,23 +228,40 @@ static void hd44780_write_data(struct hd44780 *lcd, u8 data)
     udelay(37 + 4);
 }
 
+static void recalc_pos( struct hd44780 *lcd)
+{
+    struct hd44780_geometry *geo = lcd->geometry;
+
+
+    while (lcd->pos.col >= geo->cols) {
+        lcd->pos.row += 1;
+        lcd->pos.col -= geo->cols;
+    }
+
+    while (lcd->pos.col < 0) {
+        lcd->pos.row -= 1;
+        lcd->pos.col += geo->cols;
+    }
+
+    while (lcd->pos.row < 0)
+    {
+        lcd->pos.row += geo->rows;
+    }
+
+    lcd->pos.row %= geo->rows;
+
+}
+
 /*
  * writes byte and advances, advances the character position in the display
  * and adjusts the col, row properly
  */
 static void hd44780_write_char(struct hd44780 *lcd, char ch)
 {
-    struct hd44780_geometry *geo = lcd->geometry;
-
     hd44780_write_data(lcd, ch);
-
     lcd->pos.col++;
-
-    if (lcd->pos.col == geo->cols) {
-        lcd->pos.row = (lcd->pos.row + 1) % geo->rows;
-        lcd->pos.col = 0;
-        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
-    }
+    recalc_pos( lcd );
+//    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
 }
 
 /**
@@ -269,12 +289,12 @@ static void hd44780_handle_new_line(struct hd44780 *lcd)
 
     // clear to end of line
     vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
-
-    lcd->pos.row = (lcd->pos.row + 1) % geo->rows;
-    lcd->pos.col = 0;
+    lcd->pos.row++;
+    lcd->pos.col=0;
+    recalc_pos( lcd );
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
         | geo->start_addrs[lcd->pos.row]);
-    vt100_clear_line(lcd, 0, lcd->geometry->cols);
+//    vt100_clear_line(lcd, 0, lcd->geometry->cols);
 }
 
 static void hd44780_handle_carriage_return(struct hd44780 *lcd)
@@ -347,6 +367,15 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col ); 
 }
 
+static int parse_number( const char* idx, int length )
+{
+    int result = 0;
+    int i;
+    for (int i=0;i<length;i++) {
+        result = (result *10)+(*(idx+i)-'0');
+    }
+    return result;
+}
 /*
 VT100 sequence buffer parser
 */
@@ -362,32 +391,28 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     numlen=strspn( idx, "0123456789");
     if (numlen)
     {
-        if (numlen>2)
+        if (numlen>MAX_VT100_FIRST_NUMBER)
         {
             // first number too long
             printk (KERN_INFO "first number too long: %s \n", lcd->esc_seq_buf.buf );
             hd44780_flush_esc_seq(lcd);
             return;
         }
-        num1 = *idx - '0';
-        idx++;
+        num1 = parse_number( idx, numlen );
+        idx+=numlen;
         if ( *idx == ';' ) {
             idx++;
             numlen=strspn( idx, "0123456789");
             if (numlen) {
-                if (numlen>2)
+                if (numlen>MAX_VT100_SECOND_NUMBER)
                 {
                     // second number too long
                     printk (KERN_INFO "second number too long: %s \n", lcd->esc_seq_buf.buf );
                     hd44780_flush_esc_seq(lcd);
                     return;
                 }
-                num2 = *idx - '0';
-                idx++;
-                if (numlen==2) {
-                    num2 = num2 * 10 + *idx - '0';
-                    idx++;
-                }
+                num2 = parse_number( idx, numlen );
+                idx+=numlen;
             }
         }
     } else {
@@ -424,8 +449,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             lcd->pos.col -= num1;
             break;
         }
-        lcd->pos.row %= geo->rows;
-        lcd->pos.col %= geo->cols;
+        recalc_pos( lcd );
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[lcd->pos.row] + lcd->pos.col));
         break;
     case 'H':
@@ -443,9 +467,9 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             num1 = 1;
             num2 = 1;
         }
-        lcd->pos.row = (num1-1) % geo->rows;
-        lcd->pos.col = (num2-1) % geo->cols;
-
+        lcd->pos.row = (num1-1);
+        lcd->pos.col = (num2-1);
+        recalc_pos( lcd );
         if (lcd->pos.row == 0 && lcd->pos.col == 0) {
             hd44780_write_instruction(lcd, HD44780_RETURN_HOME);
         } else {
