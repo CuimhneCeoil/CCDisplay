@@ -1,1 +1,2 @@
-KERNEL=="lcd[0-9]" MODE="0666" 
+KERNEL=="lcd[0-9]" MODE="0666"
+SUBSYSTEM=="hd44780", ACTION="add", RUN+="/usr/bin/find /sys/devices/virtual/hd44780 -maxdepth 2 -type f -exec /bin/chmod ugo+rw {} \;"
