@@ -761,7 +761,7 @@ static ssize_t geometry_store(struct device *dev,
 
     return count;
 }
-static DEVICE_ATTR_RW(geometry);
+static DEVICE_ATTR( geometry, 0664, geometry_store, geometry_show);
 
 static ssize_t backlight_show(struct device *dev, struct device_attribute *attr,
         char *buf)
@@ -782,7 +782,7 @@ static ssize_t backlight_store(struct device *dev,
 
     return count;
 }
-static DEVICE_ATTR_RW(backlight);
+static DEVICE_ATTR( backlight, 0664, backlight_store, backlight_show);
 
 static ssize_t cursor_blink_show(struct device *dev, struct device_attribute *attr,
         char *buf)
@@ -803,7 +803,7 @@ static ssize_t cursor_blink_store(struct device *dev,
 
     return count;
 }
-static DEVICE_ATTR_RW(cursor_blink);
+static DEVICE_ATTR( cursor_blink, 0664, cursor_blink_store, cursor_blink_show);
 
 static ssize_t cursor_display_show(struct device *dev, struct device_attribute *attr,
         char *buf)
@@ -824,8 +824,7 @@ static ssize_t cursor_display_store(struct device *dev,
 
     return count;
 }
-static DEVICE_ATTR_RW(cursor_display);
-
+static DEVICE_ATTR( cursor_display, 0664, cursor_display_store, cursor_display_show);
 
 static ssize_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, char* buf )
 {
@@ -911,7 +910,7 @@ static ssize_t char0_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char0_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 0, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char0);
+static DEVICE_ATTR( char0, 0664, char0_store, char0_show);
 
 static ssize_t char1_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 1, dev, attr, buf, count );
@@ -919,7 +918,7 @@ static ssize_t char1_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char1_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 1, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char1);
+static DEVICE_ATTR( char1, 0664, char1_store, char1_show);
 
 static ssize_t char2_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 2, dev, attr, buf, count );
@@ -927,7 +926,7 @@ static ssize_t char2_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char2_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 2, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char2);
+static DEVICE_ATTR( char2, 0664, char2_store, char2_show);
 
 static ssize_t char3_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 3, dev, attr, buf, count );
@@ -935,7 +934,7 @@ static ssize_t char3_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char3_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 3, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char3);
+static DEVICE_ATTR( char3, 0664, char3_store, char3_show);
 
 static ssize_t char4_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 4, dev, attr, buf, count );
@@ -943,7 +942,7 @@ static ssize_t char4_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char4_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 4, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char4);
+static DEVICE_ATTR( char4, 0664, char4_store, char4_show);
 
 static ssize_t char5_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 5, dev, attr, buf, count );
@@ -951,7 +950,7 @@ static ssize_t char5_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char5_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 5, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char5);
+static DEVICE_ATTR( char5, 0664, char5_store, char5_show);
 
 static ssize_t char6_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 6, dev, attr, buf, count );
@@ -959,7 +958,7 @@ static ssize_t char6_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char6_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 6, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char6);
+static DEVICE_ATTR( char6, 0664, char6_store, char6_show);
 
 static ssize_t char7_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
     return character_store( 7, dev, attr, buf, count );
@@ -967,7 +966,7 @@ static ssize_t char7_store(struct device *dev, struct device_attribute *attr, co
 static ssize_t char7_show(struct device *dev, struct device_attribute *attr, char* buf ) {
     return character_show( 7, dev, attr, buf );
 }
-static DEVICE_ATTR_RW(char7);
+static DEVICE_ATTR( char7, 0664, char7_store, char7_show);
 
 static struct attribute *hd44780_device_attrs[] = {
     &dev_attr_geometry.attr,
