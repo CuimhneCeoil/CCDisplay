@@ -63,7 +63,7 @@ The custom characters are 8 lines of 5 bits.  Each line is encoded as a base 32 
 *   *   10001 --------------> H
  ***    01110 --------------> E
 ```
-To set character 0 to this character execute `echo HTL0HHHE > /sys/class/hd44780/lcd0/char1`
+To set character 0 to this character execute `echo HTL0HHHE > /sys/class/hd44780/lcd0/char0`
 
 The site https://omerk.github.io/lcdchargen/ will assist in the creation of the patterns.
 
