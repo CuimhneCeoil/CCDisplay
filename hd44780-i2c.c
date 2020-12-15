@@ -991,14 +991,14 @@ static int hd44780_file_open(struct inode *inode, struct file *filp)
 {
     filp->private_data = container_of(inode->i_cdev, struct hd44780, cdev);
 
-    printk (KERN_DEBUG "opening %p on %p", filp->private_data, filp );
+    //printk (KERN_DEBUG "opening %p on %p", filp->private_data, filp );
 
     return 0;
 }
 
 static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
-    printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
+    //printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
     return 0;
 }
 
@@ -1012,7 +1012,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 
     mutex_lock(&lcd->lock);
     // TODO: Consider using an interruptible lock
-    printk (KERN_DEBUG "writing %i bytes to %p", count, lcd );
+    //printk (KERN_DEBUG "writing %i bytes to %p", count, lcd );
 
     while (written<count) {
         n = min( count-written, (size_t)BUF_SIZE);
@@ -1029,7 +1029,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     if (lcd->is_in_esc_seq) {
         hd44780_flush_esc_seq(lcd);
     }
-    printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
+    //printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
 
     mutex_unlock(&lcd->lock);
 
