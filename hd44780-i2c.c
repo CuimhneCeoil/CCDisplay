@@ -322,7 +322,7 @@ static void hd44780_leave_esc_seq(struct hd44780 *lcd)
 static void hd44780_flush_esc_seq(struct hd44780 *lcd)
 {
     int idx;
-    printk (KERN_INFO, "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
+    //printk (KERN_INFO, "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
     /* Write \e that initiated current esc seq */
     hd44780_write_char(lcd, '\e');
 
