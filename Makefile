@@ -9,7 +9,9 @@ else
 	PWD := $(shell pwd)
 
 default:
+	echo "START OF DEBUG"
 	export
+	echo "END OF DEBUG"
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
