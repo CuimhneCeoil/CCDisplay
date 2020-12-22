@@ -1,3 +1,6 @@
+hd44780-i2c (1.0.0-2) unstable; urgency=medium
+  * changed whichlcd script
+  
 hd44780-i2c (1.0.0-1) unstable; urgency=medium
 
   * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>

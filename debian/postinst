@@ -27,6 +27,7 @@ case "$1" in
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
         chmod ugo+x /etc/lcd/lcd_setup.sh
+        chmod ugo+x /etc/lcd/whichlcd
         systemctl enable lcd
         systemctl start lcd
     ;;
