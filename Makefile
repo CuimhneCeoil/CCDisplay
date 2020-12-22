@@ -9,6 +9,7 @@ else
 	PWD := $(shell pwd)
 
 default:
+	export
 	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
