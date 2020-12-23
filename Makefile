@@ -5,8 +5,12 @@ ifneq ($(KERNELRELEASE),)
 	hd44780-i2c := hd44780-i2c.o
 
 else
+	echo "============ START MAKEFILE EXPORT ===========" 
+	export
+	echo "============ END MAKEFILE EXPORT ===========" 
 	KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 	PWD := $(shell pwd)
+	echo "KERNELDIR = $(KERNELDIR)"
 
 default:
 	echo "START OF DEBUG"
