@@ -4,6 +4,11 @@
 
 set -e
 
+echo " =============== START EXPORT ================"
+export
+echo " =============== END EXPORT ================"
+
+
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
 #        * <old-postinst> `abort-upgrade' <new version>
