@@ -76,6 +76,7 @@ pipeline {
 	                	mv ../hd44780-i2c/* ../${BUILD_DIR}/scripts/usr/src/${BUILD_DIR}
 	                	rsync -r * ../${BUILD_DIR}
 	                	echo ${VERSION_STRING} > ../${BUILD_DIR}/version.txt
+	                	sed -i "1 s/^/hd44780-i2c (1.0.0-${BUILD_NUMBER}) unstable; urgency=medium\\n\\n/" ../${BUILD_DIR}/debian/changelog
 	                '''
                 }
 
