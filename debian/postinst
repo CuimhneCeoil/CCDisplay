@@ -4,11 +4,6 @@
 
 set -e
 
-echo " =============== START EXPORT ================"
-export
-echo " =============== END EXPORT ================"
-
-
 # summary of how this script can be called:
 #        * <postinst> `configure' <most-recently-configured-version>
 #        * <old-postinst> `abort-upgrade' <new version>
@@ -23,6 +18,7 @@ echo " =============== END EXPORT ================"
 
 case "$1" in
     configure)
+    	addgroup lcd
         dkms build hd44780-i2c/VERSION_STRING
         dkms install hd44780-i2c/VERSION_STRING
         sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt
