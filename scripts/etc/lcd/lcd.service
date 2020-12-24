@@ -6,6 +6,7 @@ Type=oneshot
 RemainAfterExit=true
 ExecStart=/etc/lcd/lcd_setup.sh start
 ExecStop=/etc/lcd/lcd_setup.sh stop
+Group=lcd
 
 [Install]
 WantedBy=basic.target
