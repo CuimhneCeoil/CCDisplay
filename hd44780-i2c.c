@@ -847,8 +847,6 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     char character[9];
-    char *cp;
-    int idx;
     mutex_lock(&lcd->lock);
     memcpy( character, lcd->character+(charNum*8), 8 );
     mutex_unlock(&lcd->lock);
