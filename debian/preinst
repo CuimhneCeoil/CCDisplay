@@ -18,7 +18,7 @@ case "$1" in
     upgrade)
         set +e
         systemctl is-active --quiet lcd
-        if [ $? -ne 0 ]
+        if [ $? -eq 0 ]
         then 
             set -e
             systemctl stop lcd
