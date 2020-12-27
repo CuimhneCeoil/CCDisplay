@@ -1,1 +1,2 @@
-KERNEL=="lcd[0-9]", MODE="0666"
+KERNEL=="lcd[0-9]", SUBSYSTEM=="hd44780", MODE="0666", GROUP="lcd"
+KERNEL=="lcd[0-9]", SUBSYSTEM=="hd44780", PROGRAM="/bin/sh -c 'chown root:lcd /sys/class/hd44780/lcd0/*'"

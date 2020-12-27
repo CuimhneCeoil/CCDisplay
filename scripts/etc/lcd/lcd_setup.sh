@@ -7,9 +7,12 @@ modprobe hd44780-i2c
 case $1 in
     "start")
         echo hd44780 0x27 > /sys/class/i2c-adapter/i2c-1/new_device
-        dev=`ls /sys/class/hd44780/`
-        sleep 1
-        udevadm trigger /dev/${dev}
+        unset dev
+        while [ -z "${dev}" ]
+        do
+            sleep 1
+            dev=`ls /sys/class/hd44780/`
+        done
         printf "\e[2J\e[H${msg}Startup" > /dev/${dev}
         echo "0" > /sys/class/hd44780/${dev}/cursor_blink
         echo "0" > /sys/class/hd44780/${dev}/cursor_display
