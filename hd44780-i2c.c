@@ -850,11 +850,7 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
     char *cp;
     int idx;
     mutex_lock(&lcd->lock);
-    cp = lcd->character+(charNum*8);
-    for (idx=0;idx<8;idx++) {
-        character[idx] = *cp;
-        cp++;
-    }
+    memcpy( character, lcd->character+(charNum*8), 8 );
     mutex_unlock(&lcd->lock);
     character[8] = 0;
 
@@ -866,7 +862,6 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 {
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
-    char *cp;
     u8 code[8];
     int idx;
 
@@ -876,7 +871,6 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     }
 
     printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
-
 
     for( idx=0;idx<8;idx++)
     {
@@ -903,12 +897,14 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
 
     mutex_lock(&lcd->lock);
-    cp = lcd->character+(charNum*8);
+
+    if (copy_from_user(lcd->character+(charNum*), buf, 8)) {
+        mutex_unlock(&lcd->lock);
+        return -EFAULT;
+    }
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
     for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
-        *cp = buf[idx];
-        cp++;
     }
     mutex_unlock(&lcd->lock);
     
