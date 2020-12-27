@@ -827,7 +827,7 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
     charOffset = charNum*8;
 
     printk (KERN_DEBUG "reading = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
-                lcd->character[charOffset]+1, lcd->character[charOffset+2], lcd->character[charOffset+3],
+                lcd->character[charOffset+1], lcd->character[charOffset+2], lcd->character[charOffset+3],
                 lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
                 lcd->character[charOffset+7], charNum );
 
@@ -847,9 +847,11 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     u8 code[8];
     int idx;
     int charOffset = charNum*8;
+    char *cp;
 
     // 8 chars + null
     if (count!=9) {
+        printk (KERN_WARN "Wrong character count.  expected 9 got %i", count );
         return -EINVAL;
     }
 
@@ -880,21 +882,24 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
 
     mutex_lock(&lcd->lock);
-
-    if (copy_from_user(lcd->character+charOffset, buf, 8)) {
+    cp = lcd->character+charOffset;
+    printk (KERN_DEBUG "copying data to internal pointer");
+    if (copy_from_user(cp, buf, 8)) {
         mutex_unlock(&lcd->lock);
         return -EFAULT;
     }
+    printk (KERN_DEBUG "finished copying data to internal pointer -- copying data to LCD");
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
     for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
     }
+    printk (KERN_DEBUG "finished copying data LCD");
     mutex_unlock(&lcd->lock);
     
-    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
-            lcd->character[charOffset]+1, lcd->character[charOffset+2], lcd->character[charOffset+3],
-            lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
-            lcd->character[charOffset+7], charNum );
+    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0],
+            cp[1], cp[2], cp[3],
+            cp[4], cp[5], cp[6],
+            cp[7], charNum );
 
 
     return 9;
