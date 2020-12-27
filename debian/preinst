@@ -25,8 +25,7 @@ case "$1" in
         fi
         set -e
         modprobe -s -r hd44780-i2c
-        modprobe -s -r hd44780
-        
+        modprobe -s -r hd44780        
     ;;
 
     abort-upgrade)
