@@ -1055,7 +1055,7 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
     lcd->backlight = true;
     lcd->cursor_blink = true;
     lcd->cursor_display = true;
-    memset(lcd->character, ' ', 64 );
+    memset(lcd->character, '0', 64 );
     mutex_init(&lcd->lock);
 }
 
