@@ -851,7 +851,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 
     // 8 chars + null
     if (count!=9) {
-        printk (KERN_WARN "Wrong character count.  expected 9 got %i", count );
+        printk (KERN_WARNING, "Wrong character count.  expected 9 got %i", count );
         return -EINVAL;
     }
 
