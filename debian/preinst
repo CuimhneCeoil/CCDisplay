@@ -24,6 +24,8 @@ case "$1" in
             systemctl stop lcd
         fi
         set -e
+        modprobe -s -r hd44780-i2c
+        
     ;;
 
     abort-upgrade)

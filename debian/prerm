@@ -28,6 +28,7 @@ case "$1" in
         then
             systemctl disable lcd
         fi
+        modprobe -s -r hd44780-i2c
         if [ `dkms status hd44780-i2c/VERSION_STRING | wc -l` -gt 0 ]
         then
             dkms remove hd44780-i2c/VERSION_STRING --all
