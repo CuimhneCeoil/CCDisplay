@@ -826,17 +826,17 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
 
     charOffset = charNum*8;
 
-    printk (KERN_DEBUG "reading = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
-                lcd->character[charOffset+1], lcd->character[charOffset+2], lcd->character[charOffset+3],
-                lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
-                lcd->character[charOffset+7], charNum );
+//    printk (KERN_DEBUG "reading = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
+//                lcd->character[charOffset+1], lcd->character[charOffset+2], lcd->character[charOffset+3],
+//                lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
+//                lcd->character[charOffset+7], charNum );
 
     mutex_lock(&lcd->lock);
     memcpy( character, lcd->character+charOffset, 8 );
     mutex_unlock(&lcd->lock);
     character[8] = 0;
 
-    printk (KERN_DEBUG "showing = %s from character %i\n", character, charNum );
+//    printk (KERN_DEBUG "showing = %s from character %i\n", character, charNum );
     return scnprintf(buf, PAGE_SIZE, "%s\n", character);
 }
 
@@ -855,7 +855,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
         return -EINVAL;
     }
 
-    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
+//    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
 
     for( idx=0;idx<8;idx++)
     {
@@ -880,34 +880,25 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
             }
         }
     }
-    printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+//    printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
 
     mutex_lock(&lcd->lock);
-    printk (KERN_DEBUG "preparing internal pointer copy at offset %i", charOffset );
+//    printk (KERN_DEBUG "preparing internal pointer copy at offset %i", charOffset );
     cp = lcd->character+charOffset;
-//    printk (KERN_DEBUG "copying data to internal pointer");
-//    for (idx=0;idx<8;idx++)
-//    {
-//        cp[idx] = buf[idx];
-//    }
-//    if (copy_from_user(cp, buf, 8)) {
-//        mutex_unlock(&lcd->lock);
-//        printk (KERN_ERR "Unable to copy 8 bytes from user buffer.", buf[idx] );
-//        return -EFAULT;
-//    }
-    printk (KERN_DEBUG "copying data to LCD");
+//    printk (KERN_DEBUG "copying data to LCD");
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
     for (idx=0;idx<8;idx++)   {
         cp[idx] = buf[idx];
         hd44780_write_data( lcd, code[idx]  );
     }
-    printk (KERN_DEBUG "finished copying data LCD");
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
+//    printk (KERN_DEBUG "finished copying data LCD");
     mutex_unlock(&lcd->lock);
     
-    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0],
-            cp[1], cp[2], cp[3],
-            cp[4], cp[5], cp[6],
-            cp[7], charNum );
+//    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0],
+//            cp[1], cp[2], cp[3],
+//            cp[4], cp[5], cp[6],
+//            cp[7], charNum );
 
 
     return 9;
