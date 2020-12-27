@@ -37,6 +37,7 @@ struct hd44780 {
         int row;
         int col;
     } pos;
+    /* custom character storage 8 chars of 8 bytes*/
     char character[64];
 
     char buf[BUF_SIZE];
@@ -817,38 +818,21 @@ static DEVICE_ATTR( cursor_display, 0664, cursor_display_show, cursor_display_st
 
 static ssize_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, char* buf )
 {
-/*
- *     notes:
 
-    master pulls sda low whiel scl is high then sends 7 bits of address for the device
-    the following bit is a r/w bit tells the slave to accept or generate data
-    0=write / 1 = read
-
-    seq:
-
-    1 send start bit              -\
-    2 send slave address 7bits     +-- one command?
-    3 send r=1 or write=0 bit     -/
-    4 wait for acknowledge
-    5 send/receive the data by 8bits
-    6 expect/send acknowledge bit (5/6 repeat as necessary)
-    7 send stop bit
-
-
-    Read seq:
-
-    master: S ADDR R
-    slave: send data
-    master: ACK (more data)
-    master: ! ACK (at end)
-    master: 0stop (at end)
-
- */
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     char character[9];
+    int charOffset;
+
+    charOffset = charNum*8;
+
+    printk (KERN_DEBUG "reading = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
+                lcd->character[charOffset]+1, lcd->character[charOffset+2], lcd->character[charOffset+3],
+                lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
+                lcd->character[charOffset+7], charNum );
+
     mutex_lock(&lcd->lock);
-    memcpy( character, lcd->character+(charNum*8), 8 );
+    memcpy( character, lcd->character+charOffset, 8 );
     mutex_unlock(&lcd->lock);
     character[8] = 0;
 
@@ -907,6 +891,12 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     }
     mutex_unlock(&lcd->lock);
     
+    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
+            lcd->character[charOffset]+1, lcd->character[charOffset+2], lcd->character[charOffset+3],
+            lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
+            lcd->character[charOffset+7], charNum );
+
+
     return 9;
 }
 
