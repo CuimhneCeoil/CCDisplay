@@ -862,6 +862,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 
     u8 code[8];
     int idx;
+    int charOffset = charNum*8;
 
     // 8 chars + null
     if (count!=9) {
@@ -896,11 +897,11 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 
     mutex_lock(&lcd->lock);
 
-    if (copy_from_user(lcd->character+(charNum*), buf, 8)) {
+    if (copy_from_user(lcd->character+charOffset, buf, 8)) {
         mutex_unlock(&lcd->lock);
         return -EFAULT;
     }
-    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
     for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
     }
