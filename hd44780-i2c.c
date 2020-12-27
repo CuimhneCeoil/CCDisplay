@@ -851,7 +851,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 
     // 8 chars + null
     if (count!=9) {
-        printk (KERN_WARNING, "Wrong character count.  expected 9 got %i", count );
+        printk (KERN_ERR "Wrong character count.  expected 9 got %i", count );
         return -EINVAL;
     }
 
@@ -875,6 +875,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
             }
             else
             {
+                printk (KERN_ERR "Invalid character code.  expected 0-9A-V got %c", buf[idx] );
                 return -EINVAL;
             }
         }
@@ -882,10 +883,12 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
 
     mutex_lock(&lcd->lock);
+    printk (KERN_DEBUG "preparing internal pointer copy at offset %i", charOffset );
     cp = lcd->character+charOffset;
     printk (KERN_DEBUG "copying data to internal pointer");
     if (copy_from_user(cp, buf, 8)) {
         mutex_unlock(&lcd->lock);
+        printk (KERN_ERR "Unable to copy 8 bytes from user buffer.", buf[idx] );
         return -EFAULT;
     }
     printk (KERN_DEBUG "finished copying data to internal pointer -- copying data to LCD");
