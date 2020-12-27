@@ -885,15 +885,20 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     mutex_lock(&lcd->lock);
     printk (KERN_DEBUG "preparing internal pointer copy at offset %i", charOffset );
     cp = lcd->character+charOffset;
-    printk (KERN_DEBUG "copying data to internal pointer");
-    if (copy_from_user(cp, buf, 8)) {
-        mutex_unlock(&lcd->lock);
-        printk (KERN_ERR "Unable to copy 8 bytes from user buffer.", buf[idx] );
-        return -EFAULT;
-    }
-    printk (KERN_DEBUG "finished copying data to internal pointer -- copying data to LCD");
+//    printk (KERN_DEBUG "copying data to internal pointer");
+//    for (idx=0;idx<8;idx++)
+//    {
+//        cp[idx] = buf[idx];
+//    }
+//    if (copy_from_user(cp, buf, 8)) {
+//        mutex_unlock(&lcd->lock);
+//        printk (KERN_ERR "Unable to copy 8 bytes from user buffer.", buf[idx] );
+//        return -EFAULT;
+//    }
+    printk (KERN_DEBUG "copying data to LCD");
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
     for (idx=0;idx<8;idx++)   {
+        cp[idx] = buf[idx];
         hd44780_write_data( lcd, code[idx]  );
     }
     printk (KERN_DEBUG "finished copying data LCD");
