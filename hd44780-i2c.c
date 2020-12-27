@@ -37,6 +37,7 @@ struct hd44780 {
         int row;
         int col;
     } pos;
+    char character[64];
 
     char buf[BUF_SIZE];
     struct {
@@ -74,8 +75,17 @@ extern struct hd44780_geometry *hd44780_geometries[];
  */
 
 #define BL  0x08
-#define E   0x04
+/*
+ * Busy flag
+ */
+#define BF   0x04
+/*
+ * read/write read=1/write=0
+ */
 #define RW  0x02
+/*
+ * register selector  0=instruction/1=data
+ */
 #define RS  0x01
 
 #define HD44780_CLEAR_DISPLAY   0x01
@@ -129,24 +139,8 @@ struct hd44780_geometry *hd44780_geometries[] = {
     NULL
 };
 
-/* Defines possible register that we can write to */
+/* Defines possible register that we can write to: instruction or data register*/
 typedef enum { IR, DR } dest_reg;
-
-/*
-    READ BLOCKS
-*/
-
-static u8 hd44780_read_data(struct hd44780 *lcd)
-{
-
-    u8 h = i2c_smbus_read_byte(lcd->i2c_client);
-    u8 l = i2c_smbus_read_byte(lcd->i2c_client);
-    
-    printk (KERN_DEBUG "read hex h=%X l=%X \n", h, l );
-
-    return (u8) ((h <<4) & 0xF0) | (l & 0XF);
-
-}
 
 /*
 
@@ -154,17 +148,12 @@ static u8 hd44780_read_data(struct hd44780 *lcd)
     WRITE BLOCKS
 */
 
-static void pcf8574_raw_write(struct hd44780 *lcd, u8 data)
-{
-    i2c_smbus_write_byte(lcd->i2c_client, data);
-}
-
 static void hd44780_write_nibble(struct hd44780 *lcd, dest_reg reg, u8 data)
 {
     /* Shift the interesting data on the upper 4 bits (b7-b4) */
     data = (data << 4) & 0xF0;
 
-    /* Flip the RS bit if we write do data register */
+    /* Flip the RS bit if we write to data register */
     if (reg == DR)
         data |= RS;
 
@@ -175,15 +164,15 @@ static void hd44780_write_nibble(struct hd44780 *lcd, dest_reg reg, u8 data)
     if (lcd->backlight)
         data |= BL;
 
-    pcf8574_raw_write(lcd, data);
+    i2c_smbus_write_byte(lcd->i2c_client, data);
     /* Theoretically wait for tAS = 40ns, practically it's already elapsed */
 
-    /* Raise the E signal... */
-    pcf8574_raw_write(lcd, data | E);
+    /* Raise the Busy Flag... */
+    i2c_smbus_write_byte(lcd->i2c_client, data | BF);
     /* Again, "wait" for pwEH = 230ns */
 
     /* ...and let it fall to clock the data into the HD44780's register */
-    pcf8574_raw_write(lcd, data);
+    i2c_smbus_write_byte(lcd->i2c_client, data);
     /* And again, "wait" for about tCYC_E - pwEH = 270ns */
 }
 
@@ -650,7 +639,7 @@ void hd44780_set_geometry(struct hd44780 *lcd, struct hd44780_geometry *geo)
 void hd44780_set_backlight(struct hd44780 *lcd, bool backlight)
 {
     lcd->backlight = backlight;
-    pcf8574_raw_write(lcd, backlight ? BL : 0x00);
+    i2c_smbus_write_byte(lcd->i2c_client, backlight ? BL : 0x00);
 }
 
 static void hd44780_update_display_ctrl(struct hd44780 *lcd)
@@ -828,32 +817,45 @@ static DEVICE_ATTR( cursor_display, 0664, cursor_display_show, cursor_display_st
 
 static ssize_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, char* buf )
 {
+/*
+ *     notes:
 
+    master pulls sda low whiel scl is high then sends 7 bits of address for the device
+    the following bit is a r/w bit tells the slave to accept or generate data
+    0=write / 1 = read
+
+    seq:
+
+    1 send start bit              -\
+    2 send slave address 7bits     +-- one command?
+    3 send r=1 or write=0 bit     -/
+    4 wait for acknowledge
+    5 send/receive the data by 8bits
+    6 expect/send acknowledge bit (5/6 repeat as necessary)
+    7 send stop bit
+
+
+    Read seq:
+
+    master: S ADDR R
+    slave: send data
+    master: ACK (more data)
+    master: ! ACK (at end)
+    master: 0stop (at end)
+
+ */
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
-    u8 code[8];
-    int idx;
+    char character[9];
 
     mutex_lock(&lcd->lock);
-    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
-    for (idx=0;idx<8;idx++)   {
-        code[idx] = hd44780_read_data( lcd  );
-    }
+    memcpy( character, lcd->character[charNum*8], 8 );
     mutex_unlock(&lcd->lock);
+    // put the null at the end
+    character[8] = 0;
 
-    printk (KERN_DEBUG "read hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
-
-    for( idx=0;idx<8;idx++)
-    {
-        if (code[idx]<=9)
-        {
-            code[idx]='0'+code[idx];
-        } else {
-            code[idx]='A'-10+code[idx];
-        }
-    }
-    printk (KERN_DEBUG "showing = %c%c%c%c%c%c%c%c from character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
-    return scnprintf(buf, PAGE_SIZE, "%c%c%c%c%c%c%c%c\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7]);
+    printk (KERN_DEBUG "showing = %s from character %i\n", character, charNum );
+    return scnprintf(buf, PAGE_SIZE, "%s\n", character);
 }
 
 static ssize_t character_store(int charNum, struct device *dev, struct device_attribute *attr, const char* buf, size_t count )
@@ -863,12 +865,13 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     u8 code[8];
     int idx;
 
-    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
-
     // 8 chars + null
     if (count!=9) {
         return -EINVAL;
     }
+
+    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
+
 
     for( idx=0;idx<8;idx++)
     {
@@ -895,6 +898,7 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
     printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
 
     mutex_lock(&lcd->lock);
+    memcpy( lcd->character[charNum*8], buf, 8 );
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | (charNum*8) );
     for (idx=0;idx<8;idx++)   {
         hd44780_write_data( lcd, code[idx]  );
@@ -1050,6 +1054,7 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
     lcd->backlight = true;
     lcd->cursor_blink = true;
     lcd->cursor_display = true;
+    memset(lcd->character, ' ', 64 );
     mutex_init(&lcd->lock);
 }
 
