@@ -32,7 +32,7 @@ struct hd44780 {
     struct i2c_client *i2c_client;
     struct hd44780_geometry *geometry;
 
-    /* Current cursor positon on the display */
+    /* Current cursor position on the display */
     struct {
         int row;
         int col;
@@ -221,29 +221,33 @@ static void hd44780_write_data(struct hd44780 *lcd, u8 data)
 static void recalc_pos( struct hd44780 *lcd)
 {
     struct hd44780_geometry *geo = lcd->geometry;
+    int oldrow = lcd->pos.row;
 
-    printk (KERN_DEBUG "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    //printk (KERN_DEBUG "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
     while (lcd->pos.col >= geo->cols) {
         lcd->pos.row += 1;
         lcd->pos.col -= geo->cols;
     }
-    printk (KERN_DEBUG "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    //printk (KERN_DEBUG "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     while (lcd->pos.col < 0) {
         lcd->pos.row -= 1;
         lcd->pos.col += geo->cols;
     }
-    printk (KERN_DEBUG "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    //printk (KERN_DEBUG "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     while (lcd->pos.row < 0)
     {
         lcd->pos.row += geo->rows;
     }
-    printk (KERN_DEBUG "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    //printk (KERN_DEBUG "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
-    lcd->pos.row %= geo->rows;
-    printk (KERN_DEBUG "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
-
+    if (oldrow != lcd->pos.row) {
+        // handle discontinuous row starting positions
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
+                | geo->start_addrs[lcd->pos.row]_lcd->pos.col);
+    }
+    //printk (KERN_DEBUG "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
 }
 
 /*
@@ -255,7 +259,6 @@ static void hd44780_write_char(struct hd44780 *lcd, char ch)
     hd44780_write_data(lcd, ch);
     lcd->pos.col++;
     recalc_pos( lcd );
-//    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
 }
 
 /**
@@ -288,7 +291,6 @@ static void hd44780_handle_new_line(struct hd44780 *lcd)
     recalc_pos( lcd );
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
         | geo->start_addrs[lcd->pos.row]);
-//    vt100_clear_line(lcd, 0, lcd->geometry->cols);
 }
 
 static void hd44780_handle_carriage_return(struct hd44780 *lcd)
