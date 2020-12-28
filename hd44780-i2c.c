@@ -572,6 +572,10 @@ static void hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
     lcd->esc_seq_buf.buf[ lcd->esc_seq_buf.length++ ] = ch;
     if (lcd->esc_seq_buf.length == 1)
     {
+        if (lcd->esc_seq_buf.buf[0] == 'c' ) {
+            hd44780_init_lcd( lcd );
+            hd44780_leave_esc_seq(lcd);
+        }
         if (lcd->esc_seq_buf.buf[0] != '[')
         {
             hd44780_flush_esc_seq(lcd);

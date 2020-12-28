@@ -20,12 +20,13 @@ Supported control codes:
 * `Ctrl-Q`/`0x11` - Backlight on
 
 Supported VT100 terminal control escape sequences:
+* `<ESC>c` - Reinitialize the display.  Note: no `[` in the sequence.
 * `<ESC>[nJ` - Erase in display. 
     * n=0 or not specified - Erase from the active position to the end of the screen, inclusive (default)
     * n=1 - Erase from start of the screen to the active position, inclusive
     * n=2 - Erase all of the display – all lines are erased and the cursor does not move.
-* `<ESC>[H` - cursor home
-* `<ESC>[row;colH` - moves the active position to the position specified by the parameters. This sequence has two parameter values, the first specifying the row position and the second specifying the column position. A parameter value of zero or one for the first or second parameter moves the active position to the first row or column in the display, respectively. The default condition with no parameters present is equivalent to a cursor to home action
+* `<ESC>[H` - Cursor home
+* `<ESC>[row;colH` - Moves the active position to the position specified by the parameters. This sequence has two parameter values, the first specifying the row position and the second specifying the column position. A parameter value of zero or one for the first or second parameter moves the active position to the first row or column in the display, respectively. The default condition with no parameters present is equivalent to a cursor to home action
 * `<ESC>[nA` - Move cursor up n lines
 * `<ESC>[nB` - Move cursor down n lines
 * `<ESC>[nC` - Move cursor right n characters
