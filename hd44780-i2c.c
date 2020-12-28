@@ -245,7 +245,7 @@ static void recalc_pos( struct hd44780 *lcd)
     if (oldrow != lcd->pos.row) {
         // handle discontinuous row starting positions
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
-                | geo->start_addrs[lcd->pos.row]_lcd->pos.col);
+                | geo->start_addrs[lcd->pos.row]+lcd->pos.col);
     }
     //printk (KERN_DEBUG "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
 }
