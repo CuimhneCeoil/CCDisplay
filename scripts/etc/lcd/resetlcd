@@ -1,0 +1,9 @@
+#!/bin/bash
+
+LCD=`whichlcd`
+if [ ! -z "${LCD}" ]
+	printf "\ec" > /dev/${LCD}
+else
+	echo "No LCD Found"
+fi
+
