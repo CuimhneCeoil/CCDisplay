@@ -1062,7 +1062,7 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
      * These timing delays are based on hd44780 documentation for 250 kHz so
      * they must be adjusted for different freq.
      */
-    double freqRatio = 1.0;  // this should be actual_freq/250.0
+    double freqRatio = 270.0/100;  // this should be 270.0/actual_freq i2c has 100kHz freq
      /* enable cycle  time in nano seconds */
     lcd->delays.tCYC_E = (int) ceil( freqRatio * 1000);
     /* enable pluse width high in nano seconds */
