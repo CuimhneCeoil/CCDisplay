@@ -159,7 +159,7 @@ static void hd44780_write_nibble(struct hd44780 *lcd, dest_reg reg, u8 data)
         data |= RS;
 
     /* Keep the RW bit low, because we write */
-    data = data | (RW & 0x00);
+    data = data & ~RW;
 
     /* Flip the backlight bit */
     if (lcd->backlight)
