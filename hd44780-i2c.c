@@ -259,7 +259,7 @@ static void recalc_pos( struct hd44780 *lcd)
     if (oldrow != lcd->pos.row) {
         // handle discontinuous row starting positions
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
-                | geo->start_addrs[lcd->pos.row]+lcd->pos.col);
+                | (geo->start_addrs[lcd->pos.row]+lcd->pos.col));
     }
     //printk (KERN_DEBUG "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
 }
@@ -633,12 +633,12 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
                 lcd->is_in_esc_seq = true;
                 break;
             case 0x11: // ^S
-                lcd->backlight = false
-                hd44780_set_display( lcd );
+                lcd->backlight = false;
+                hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
                 break;
             case 0x13: // ^Q
-                lcd->backlight = true
-                hd44780_set_display( lcd );
+                lcd->backlight = true;
+                hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
                 break;
             default:
                 hd44780_write_char(lcd, ch);
@@ -667,7 +667,7 @@ static void hd44780_update_display_ctrl(struct hd44780 *lcd)
 {
     hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
         | (lcd->cursor_display ? HD44780_D_DISPLAY_ON : 0)
-        | (lcd->cursor_blink ? HD44780_B_BLINK_ON | 0 )
+        | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
         );
 }
 
@@ -782,8 +782,8 @@ static ssize_t backlight_store(struct device *dev,
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     mutex_lock(&lcd->lock);
-    lcd->backlight == buf[0] == '1';
-    hd44780_set_display( lcd );
+    lcd->backlight = (buf[0] == '1');
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
     mutex_unlock(&lcd->lock);
 
     return count;
@@ -1055,6 +1055,13 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
         struct i2c_client *i2c_client)
 {
+    /**
+     * simulate floating point ceil calculation here.  Value is freq kHz * 10
+     */
+    int freqMult = 2700/1000;  // this should be 270.0/actual_freq i2c has 100kHz freq
+    freqMult = freqMult + ((freqMult % 10)>0?10:0);
+    freqMult = freqMult/10;
+
     lcd->geometry = geometry;
     lcd->i2c_client = i2c_client;
 
@@ -1062,21 +1069,21 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
      * These timing delays are based on hd44780 documentation for 250 kHz so
      * they must be adjusted for different freq.
      */
-    double freqRatio = 270.0/100;  // this should be 270.0/actual_freq i2c has 100kHz freq
+
      /* enable cycle  time in nano seconds */
-    lcd->delays.tCYC_E = (int) ceil( freqRatio * 1000);
+    lcd->delays.tCYC_E = freqMult * 1000;
     /* enable pluse width high in nano seconds */
-    lcd->delays.pwEH = (int) ceil( freqRatio * 450);
+    lcd->delays.pwEH =  freqMult * 450;
     /* address hold time in nano seconds */
-    lcd->delays.tAS= (int) ceil( freqRatio * 60);
+    lcd->delays.tAS = freqMult * 60;
     /* address hold time in nano seconds */
-    lcd->delays.tAH = (int) ceil( freqRatio * 20);
+    lcd->delays.tAH = freqMult * 20;
     /* the standard execution delay in micro seconds*/
-    lcd->delays.tExec = (int) ceil( freqRatio * 37);
+    lcd->delays.tExec = freqMult * 37;
     /* the standard write delay (execution + 4) for a shift in micro seconds*/
-    lcd->delays.tWrite = (int) ceil( freqRatio * (37 + 4));
+    lcd->delays.tWrite = freqMult * (37 + 4);
     /* the standard time to return home in micro seconds */
-    lcd->delays.tHome = (int) ceil( freqRatio * 1520);
+    lcd->delays.tHome = freqMult * 1520;
 
     lcd->pos.row = 0;
     lcd->pos.col = 0;
