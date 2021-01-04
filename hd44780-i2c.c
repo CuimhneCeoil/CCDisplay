@@ -19,7 +19,6 @@
 #define MAX_VT100_FIRST_NUMBER 2
 #define MAX_VT100_SECOND_NUMBER 2
 
-
 struct hd44780_geometry {
     int cols;
     int rows;
@@ -31,6 +30,16 @@ struct hd44780 {
     struct device *device;
     struct i2c_client *i2c_client;
     struct hd44780_geometry *geometry;
+
+    struct {
+        int tCYC_E;
+        int pwEH;
+        int tAS;
+        int tAH;
+        int tExec;
+        int tWrite;
+        int tHome;
+    } delays;
 
     /* Current cursor position on the display */
     struct {
@@ -63,7 +72,6 @@ void hd44780_write(struct hd44780 *, const char *, size_t);
 void hd44780_init_lcd(struct hd44780 *);
 void hd44780_print(struct hd44780 *, const char *);
 void hd44780_set_geometry(struct hd44780 *, struct hd44780_geometry *);
-void hd44780_set_backlight(struct hd44780 *, bool);
 void hd44780_set_cursor_blink(struct hd44780 *, bool);
 void hd44780_set_cursor_display(struct hd44780 *, bool);
 
@@ -104,11 +112,8 @@ extern struct hd44780_geometry *hd44780_geometries[];
 #define HD44780_N_1LINE     0x00
 
 #define HD44780_D_DISPLAY_ON    0x04
-#define HD44780_D_DISPLAY_OFF   0x00
 #define HD44780_C_CURSOR_ON 0x02
-#define HD44780_C_CURSOR_OFF    0x00
 #define HD44780_B_BLINK_ON  0x01
-#define HD44780_B_BLINK_OFF 0x00
 
 #define HD44780_ID_INCREMENT    0x02
 #define HD44780_ID_DECREMENT    0x00
@@ -166,18 +171,15 @@ static void hd44780_write_nibble(struct hd44780 *lcd, dest_reg reg, u8 data)
         data |= BL;
 
     i2c_smbus_write_byte(lcd->i2c_client, data);
-    ndelay( 40 );
-    /* Theoretically wait for tAS = 40ns, practically it's already elapsed */
+    ndelay( lcd->delays.tAS );
 
     /* Raise the Busy Flag... */
     i2c_smbus_write_byte(lcd->i2c_client, data | BF);
-    ndelay( 230 );
-    /* Again, "wait" for pwEH = 230ns */
+    ndelay( lcd->delays.pwEH );
 
     /* ...and let it fall to clock the data into the HD44780's register */
     i2c_smbus_write_byte(lcd->i2c_client, data);
-    ndelay( 270 );
-    /* And again, "wait" for about tCYC_E - pwEH = 270ns */
+    ndelay( lcd->delays.tCYC_E );
 }
 
 /*
@@ -192,7 +194,7 @@ static void hd44780_write_instruction_high_nibble(struct hd44780 *lcd, u8 data)
 
     hd44780_write_nibble(lcd, IR, h);
 
-    udelay(37);
+    udelay( lcd->delays.tWrite );
 }
 
 static void hd44780_write_instruction(struct hd44780 *lcd, u8 data)
@@ -203,7 +205,13 @@ static void hd44780_write_instruction(struct hd44780 *lcd, u8 data)
     hd44780_write_nibble(lcd, IR, h);
     hd44780_write_nibble(lcd, IR, l);
 
-    udelay(37);
+
+    if ( (HD44780_CLEAR_DISPLAY & data) || (HD44780_RETURN_HOME & data)) {
+        udelay( lcd->delays.tHome);
+    } else  {
+        udelay( lcd->delays.tExec );
+    }
+
 }
 
 /*
@@ -218,7 +226,7 @@ static void hd44780_write_data(struct hd44780 *lcd, u8 data)
     hd44780_write_nibble(lcd, DR, h);
     hd44780_write_nibble(lcd, DR, l);
 
-    udelay(37 + 4);
+    udelay( lcd->delays.tWrite );
 }
 
 static void recalc_pos( struct hd44780 *lcd)
@@ -276,7 +284,7 @@ static void hd44780_clear_display(struct hd44780 *lcd)
     hd44780_write_instruction(lcd, HD44780_CLEAR_DISPLAY);
 
     /* Wait for 1.64 ms because this one needs more time */
-    udelay(1640);
+    udelay( lcd->delays.tHome );
 
     /*
      * CLEAR_DISPLAY instruction also returns cursor to home,
@@ -625,10 +633,12 @@ void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
                 lcd->is_in_esc_seq = true;
                 break;
             case 0x11: // ^S
-                hd44780_set_backlight( lcd, false );
+                lcd->backlight = false
+                hd44780_set_display( lcd );
                 break;
             case 0x13: // ^Q
-                hd44780_set_backlight( lcd, true );
+                lcd->backlight = true
+                hd44780_set_display( lcd );
                 break;
             default:
                 hd44780_write_char(lcd, ch);
@@ -653,21 +663,12 @@ void hd44780_set_geometry(struct hd44780 *lcd, struct hd44780_geometry *geo)
     hd44780_clear_display(lcd);
 }
 
-void hd44780_set_backlight(struct hd44780 *lcd, bool backlight)
-{
-    lcd->backlight = backlight;
-    i2c_smbus_write_byte(lcd->i2c_client, backlight ? BL : 0x00);
-}
-
 static void hd44780_update_display_ctrl(struct hd44780 *lcd)
 {
-
     hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
-        | HD44780_D_DISPLAY_ON
-        | (lcd->cursor_display ? HD44780_C_CURSOR_ON
-            : HD44780_C_CURSOR_OFF)
-        | (lcd->cursor_blink ? HD44780_B_BLINK_ON
-            : HD44780_B_BLINK_OFF));
+        | (lcd->cursor_display ? HD44780_D_DISPLAY_ON : 0)
+        | (lcd->cursor_blink ? HD44780_B_BLINK_ON | 0 )
+        );
 }
 
 void hd44780_set_cursor_blink(struct hd44780 *lcd, bool cursor_blink)
@@ -717,8 +718,6 @@ void hd44780_init_lcd(struct hd44780 *lcd)
 #define CLASS_NAME  "hd44780"
 #define NAME        "hd44780"
 #define NUM_DEVICES 8
-
-
 
 static struct class *hd44780_class;
 static dev_t dev_no;
@@ -783,7 +782,8 @@ static ssize_t backlight_store(struct device *dev,
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     mutex_lock(&lcd->lock);
-    hd44780_set_backlight(lcd, buf[0] == '1');
+    lcd->backlight == buf[0] == '1';
+    hd44780_set_display( lcd );
     mutex_unlock(&lcd->lock);
 
     return count;
@@ -1057,6 +1057,27 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
 {
     lcd->geometry = geometry;
     lcd->i2c_client = i2c_client;
+
+    /*
+     * These timing delays are based on hd44780 documentation for 250 kHz so
+     * they must be adjusted for different freq.
+     */
+    double freqRatio = 1.0;  // this should be actual_freq/250.0
+     /* enable cycle  time in nano seconds */
+    lcd->delays.tCYC_E = (int) ceil( freqRatio * 1000);
+    /* enable pluse width high in nano seconds */
+    lcd->delays.pwEH = (int) ceil( freqRatio * 450);
+    /* address hold time in nano seconds */
+    lcd->delays.tAS= (int) ceil( freqRatio * 60);
+    /* address hold time in nano seconds */
+    lcd->delays.tAH = (int) ceil( freqRatio * 20);
+    /* the standard execution delay in micro seconds*/
+    lcd->delays.tExec = (int) ceil( freqRatio * 37);
+    /* the standard write delay (execution + 4) for a shift in micro seconds*/
+    lcd->delays.tWrite = (int) ceil( freqRatio * (37 + 4));
+    /* the standard time to return home in micro seconds */
+    lcd->delays.tHome = (int) ceil( freqRatio * 1520);
+
     lcd->pos.row = 0;
     lcd->pos.col = 0;
     memset(lcd->esc_seq_buf.buf, 0, ESC_SEQ_BUF_SIZE);
