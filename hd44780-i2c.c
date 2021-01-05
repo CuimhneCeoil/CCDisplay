@@ -378,6 +378,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
 static void hd44780_update_display_ctrl(struct hd44780 *lcd)
 {
     hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
+        | HD44780_D_DISPLAY_ON
         | (lcd->cursor_display ? HD44780_C_CURSOR_ON : 0)
         | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
         );
