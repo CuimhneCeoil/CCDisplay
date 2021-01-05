@@ -1052,38 +1052,42 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     return written;
 }
 
+
+/**
+ * simulate floating point ceil calculation here.  
+ * a= actual freq in kHz
+*  b = desired dealy at 270kHz
+ * ceil( b * 270/a  )
+ */
+#define FREQMULT(b,a) (270*a*10/b)/10+((270*a*10/b) % 10 > 0)
+
 static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
         struct i2c_client *i2c_client)
 {
-    /**
-     * simulate floating point ceil calculation here.  Value is freq kHz * 10
-     */
-    int freqMult = 2700/1000;  // this should be 270.0/actual_freq i2c has 100kHz freq
-    freqMult = freqMult + ((freqMult % 10)>0?10:0);
-    freqMult = freqMult/10;
 
     lcd->geometry = geometry;
     lcd->i2c_client = i2c_client;
 
     /*
-     * These timing delays are based on hd44780 documentation for 250 kHz so
+     * These timing delays are based on hd44780 documentation for 270 kHz so
      * they must be adjusted for different freq.
+     * i2c freq = 100kHz
      */
 
      /* enable cycle  time in nano seconds */
-    lcd->delays.tCYC_E = freqMult * 1000;
+    lcd->delays.tCYC_E = FREQMULT( 100,  1000);
     /* enable pluse width high in nano seconds */
-    lcd->delays.pwEH =  freqMult * 450;
+    lcd->delays.pwEH =  FREQMULT( 100, 450);
     /* address hold time in nano seconds */
-    lcd->delays.tAS = freqMult * 60;
+    lcd->delays.tAS = FREQMULT( 100, 60);
     /* address hold time in nano seconds */
-    lcd->delays.tAH = freqMult * 20;
+    lcd->delays.tAH = FREQMULT( 100, 20);
     /* the standard execution delay in micro seconds*/
-    lcd->delays.tExec = freqMult * 37;
+    lcd->delays.tExec = FREQMULT( 100, 37);
     /* the standard write delay (execution + 4) for a shift in micro seconds*/
-    lcd->delays.tWrite = freqMult * (37 + 4);
+    lcd->delays.tWrite = FREQMULT( 100, (37 + 4));
     /* the standard time to return home in micro seconds */
-    lcd->delays.tHome = freqMult * 1520;
+    lcd->delays.tHome = FREQMULT( 100, 1520);
 
     lcd->pos.row = 0;
     lcd->pos.col = 0;
