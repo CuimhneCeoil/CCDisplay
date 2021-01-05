@@ -667,7 +667,7 @@ void hd44780_set_geometry(struct hd44780 *lcd, struct hd44780_geometry *geo)
 static void hd44780_update_display_ctrl(struct hd44780 *lcd)
 {
     hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
-        | (lcd->cursor_display ? HD44780_D_DISPLAY_ON : 0)
+        | (lcd->cursor_display ? HD44780_C_CURSOR_ON : 0)
         | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
         );
 }
