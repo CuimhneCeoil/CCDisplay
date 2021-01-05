@@ -561,7 +561,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             // Not a valid escape sequence, m has second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
             hd44780_flush_esc_seq(lcd);
-        } else if (num1 < 0) {
+        } else if (num1 <= 0) {
             // turn off character modes
             lcd->cursor_blink = false;
             lcd->cursor_display = false;
