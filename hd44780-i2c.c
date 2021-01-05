@@ -72,8 +72,6 @@ void hd44780_write(struct hd44780 *, const char *, size_t);
 void hd44780_init_lcd(struct hd44780 *);
 void hd44780_print(struct hd44780 *, const char *);
 void hd44780_set_geometry(struct hd44780 *, struct hd44780_geometry *);
-void hd44780_set_cursor_blink(struct hd44780 *, bool);
-void hd44780_set_cursor_display(struct hd44780 *, bool);
 
 static void vt100_clear_line( struct hd44780 *lcd, int start, int end );
 
@@ -556,14 +554,17 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             hd44780_flush_esc_seq(lcd);
         } else if (num1 < 0) {
             // turn off character modes
-            hd44780_set_cursor_blink( lcd, false );
-            hd44780_set_cursor_display( lcd, false );
+            lcd->cursor_blink = false;
+            lcd->cursor_display = false;
+            hd44780_update_display_ctrl(lcd);
         } else if (num1 == 4 ) {
             // underline mode
-            hd44780_set_cursor_display( lcd, true );
+            lcd->cursor_display = true;
+            hd44780_update_display_ctrl(lcd);
         } else if (num1 == 5 ) {
             // blink mode
-            hd44780_set_cursor_blink( lcd, true );
+            lcd->cursor_blink = true;
+            hd44780_update_display_ctrl(lcd);
         } else {
             printk (KERN_INFO "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf );
             // not a valid number
@@ -671,17 +672,6 @@ static void hd44780_update_display_ctrl(struct hd44780 *lcd)
         );
 }
 
-void hd44780_set_cursor_blink(struct hd44780 *lcd, bool cursor_blink)
-{
-    lcd->cursor_blink = cursor_blink;
-    hd44780_update_display_ctrl(lcd);
-}
-
-void hd44780_set_cursor_display(struct hd44780 *lcd, bool cursor_display)
-{
-    lcd->cursor_display= cursor_display;
-    hd44780_update_display_ctrl(lcd);
-}
 void hd44780_init_lcd(struct hd44780 *lcd)
 {
     hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
@@ -804,7 +794,8 @@ static ssize_t cursor_blink_store(struct device *dev,
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     mutex_lock(&lcd->lock);
-    hd44780_set_cursor_blink(lcd, buf[0] == '1');
+    lcd->cursor_blink = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
     mutex_unlock(&lcd->lock);
 
     return count;
@@ -825,7 +816,8 @@ static ssize_t cursor_display_store(struct device *dev,
     struct hd44780 *lcd = dev_get_drvdata(dev);
 
     mutex_lock(&lcd->lock);
-    hd44780_set_cursor_display(lcd, buf[0] == '1');
+    lcd->cursor_display = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
     mutex_unlock(&lcd->lock);
 
     return count;
