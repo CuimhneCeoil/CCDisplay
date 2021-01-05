@@ -375,6 +375,14 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     //printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col );
 }
 
+static void hd44780_update_display_ctrl(struct hd44780 *lcd)
+{
+    hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
+        | (lcd->cursor_display ? HD44780_C_CURSOR_ON : 0)
+        | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
+        );
+}
+
 static int parse_number( const char* idx, int length )
 {
     int result = 0;
@@ -662,14 +670,6 @@ void hd44780_set_geometry(struct hd44780 *lcd, struct hd44780_geometry *geo)
         hd44780_leave_esc_seq(lcd);
 
     hd44780_clear_display(lcd);
-}
-
-static void hd44780_update_display_ctrl(struct hd44780 *lcd)
-{
-    hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
-        | (lcd->cursor_display ? HD44780_C_CURSOR_ON : 0)
-        | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
-        );
 }
 
 void hd44780_init_lcd(struct hd44780 *lcd)
