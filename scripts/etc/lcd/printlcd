@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+	echo "%0 Usage:"
+	echo "   parameter         usage"
+	echo "     1             line number 1-4"
+	echo "     2+            text to display
+	exit 1
+fi
+
+line=${1}
+shift
+printf "\x1b[${line};0H${*}\x1b[0K" >> /dev/`whichlcd`
+
