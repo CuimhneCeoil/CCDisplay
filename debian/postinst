@@ -33,8 +33,6 @@ case "$1" in
         dkms install ${DKMS_ARG}  hd44780-i2c/VERSION_STRING
         sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt
         dtparam i2c_arm=on
-        modprobe i2c_dev
-        modprobe hd44780-i2c
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
         chgrp -R lcd /etc/lcd
