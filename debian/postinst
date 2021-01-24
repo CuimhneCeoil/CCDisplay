@@ -27,7 +27,7 @@ case "$1" in
         fi
         if [ -n "${KERNEL_VERSION}" ]
         then
-           DKMS_ARG="-k ${KERNEL_VERSION} -a armv6l"
+           DKMS_ARG="${KERNEL_VERSION}"
         fi
         dkms build ${DKMS_ARG} hd44780-i2c/VERSION_STRING
         dkms autoinstall ${DKMS_ARG}  hd44780-i2c/VERSION_STRING
