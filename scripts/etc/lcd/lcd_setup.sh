@@ -6,6 +6,8 @@ modprobe hd44780-i2c
 
 case $1 in
     "start")
+        ## make sure we have the proper dkms build version
+        dkms autoinstall
         echo hd44780 0x27 > /sys/class/i2c-adapter/i2c-1/new_device
         unset dev
         while [ -z "${dev}" ]
