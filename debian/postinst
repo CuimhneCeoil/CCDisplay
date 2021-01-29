@@ -34,9 +34,11 @@ case "$1" in
         sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt        
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
+        ln -sf "/etc/lcd/resetlcd" "/usr/bin/resetcd"
         chgrp -R lcd /etc/lcd
         chmod ug+x /etc/lcd/lcd_setup.sh
         chmod ugo+x /etc/lcd/whichlcd
+        chmod ugo+x /etc/lcd/resetlcd
         systemctl enable lcd
         systemctl start lcd
     ;;

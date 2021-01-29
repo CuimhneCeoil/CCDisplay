@@ -2,6 +2,7 @@
 
 LCD=`whichlcd`
 if [ ! -z "${LCD}" ]
+then
 	printf "\ec" > /dev/${LCD}
 else
 	echo "No LCD Found"
