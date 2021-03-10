@@ -1066,21 +1066,21 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
      * they must be adjusted for different freq.
      * i2c freq = 100kHz
      */
-
+    int freq=90;
      /* enable cycle  time in nano seconds */
-    lcd->delays.tCYC_E = FREQMULT( 100,  1000);
+    lcd->delays.tCYC_E = FREQMULT( freq,  1000);
     /* enable pluse width high in nano seconds */
-    lcd->delays.pwEH =  FREQMULT( 100, 450);
+    lcd->delays.pwEH =  FREQMULT( freq, 450);
     /* address hold time in nano seconds */
-    lcd->delays.tAS = FREQMULT( 100, 60);
+    lcd->delays.tAS = FREQMULT( freq, 60);
     /* address hold time in nano seconds */
-    lcd->delays.tAH = FREQMULT( 100, 20);
+    lcd->delays.tAH = FREQMULT( freq, 20);
     /* the standard execution delay in micro seconds*/
-    lcd->delays.tExec = FREQMULT( 100, 37);
+    lcd->delays.tExec = FREQMULT( freq, 37);
     /* the standard write delay (execution + 4) for a shift in micro seconds*/
-    lcd->delays.tWrite = FREQMULT( 100, (37 + 4));
+    lcd->delays.tWrite = FREQMULT( freq, (37 + 4));
     /* the standard time to return home in micro seconds */
-    lcd->delays.tHome = FREQMULT( 100, 1520);
+    lcd->delays.tHome = FREQMULT( freq, 1520);
 
     lcd->pos.row = 0;
     lcd->pos.col = 0;
