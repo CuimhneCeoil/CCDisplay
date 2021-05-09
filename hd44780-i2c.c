@@ -1066,7 +1066,7 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
      * they must be adjusted for different freq.
      * i2c freq = 100kHz
      */
-    int freq=90;
+    int freq=100;
      /* enable cycle  time in nano seconds */
     lcd->delays.tCYC_E = FREQMULT( freq,  1000);
     /* enable pluse width high in nano seconds */
