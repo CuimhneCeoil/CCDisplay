@@ -2,13 +2,16 @@
 dir=`dirname $0`
 msg=`cat ${dir}/message.txt`
 
+#id=0x27
+id=0x21
+
 modprobe hd44780-i2c
 
 case $1 in
     "start")
         ## make sure we have the proper dkms build version
         dkms autoinstall
-        echo hd44780 0x27 > /sys/class/i2c-adapter/i2c-1/new_device
+        echo hd44780 ${id} > /sys/class/i2c-adapter/i2c-1/new_device
         unset dev
         while [ -z "${dev}" ]
         do
@@ -22,7 +25,7 @@ case $1 in
     "stop")
         dev=`ls /sys/class/hd44780/`
         printf "\e[2J\e[H${msg}Shutdown" > /dev/${dev}
-        echo 0x27 > /sys/class/i2c-adapter/i2c-1/delete_device
+        echo ${id} > /sys/class/i2c-adapter/i2c-1/delete_device
         ;;
     *)
         echo "$0 [start|stop]"
