@@ -32,10 +32,12 @@ case "$1" in
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
         ln -sf "/etc/lcd/resetlcd" "/usr/bin/resetcd"
+        ln -sf "/etc/lcd/printcd" "/usr/bin/printcd"
         chgrp -R lcd /etc/lcd
         chmod ug+x /etc/lcd/lcd_setup.sh
         chmod ugo+x /etc/lcd/whichlcd
         chmod ugo+x /etc/lcd/resetlcd
+        chmod ugo+x /etc/lcd/printlcd
         systemctl enable lcd
         systemctl start lcd
     ;;

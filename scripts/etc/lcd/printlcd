@@ -5,7 +5,7 @@ then
 	echo "%0 Usage:"
 	echo "   parameter         usage"
 	echo "     1             line number 1-4"
-	echo "     2+            text to display
+	echo "     2+            text to display"
 	exit 1
 fi
 
