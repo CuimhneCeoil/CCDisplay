@@ -418,6 +418,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     int numlen;
     int num1=-1;
     int num2=-1;
+    int prev_row = lcd->pos.row;
     struct hd44780_geometry *geo = lcd->geometry;
 
     // skip the '['
@@ -512,7 +513,6 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
 
     case 'J': // clear screen from cursor
-        int prev_row = lcd->pos.row;
         num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
@@ -541,7 +541,6 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             }
         } else if (num1 == 2) {
             // Clear screen
-            int prev_row = lcd->pos.row;
             int prev_col = lcd->pos.col;
             hd44780_clear_display(lcd);
             hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
