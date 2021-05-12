@@ -30,7 +30,7 @@ struct hd44780_geometry {
  * they must be adjusted for different freq.
  * i2c freq = 100kHz
  */
-#define FREQ=100;
+#define FREQ 100;
 
 struct hd44780 {
     struct cdev cdev;
@@ -514,7 +514,6 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             // clear to end of screen
             vt100_clear_line( lcd, lcd->pos.col, geo->cols );
             if (lcd->pos.row < geo->rows) {
-
                 lcd->pos.row++;
                 for (;lcd->pos.row<geo->rows;lcd->pos.row++)
                 {
