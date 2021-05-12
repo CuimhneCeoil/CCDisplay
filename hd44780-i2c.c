@@ -30,7 +30,7 @@ struct hd44780_geometry {
  * they must be adjusted for different freq.
  * i2c freq = 100kHz
  */
-#define FREQ 100;
+#define FREQ 100
 
 /**
  * simulate floating point ceil calculation here.
