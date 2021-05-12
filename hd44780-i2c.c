@@ -32,6 +32,14 @@ struct hd44780_geometry {
  */
 #define FREQ 100;
 
+/**
+ * simulate floating point ceil calculation here.
+ * ceil( delay * 270/FREQ  )
+ * delay The requested delay
+ */
+#define FREQMULT(delay) (270*delay*10/FREQ)/10+((270*delay*10/FREQ) % 10 > 0)
+
+
 struct hd44780 {
     struct cdev cdev;
     struct device *device;
@@ -504,8 +512,8 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
 
     case 'J': // clear screen from cursor
-        num1 = num1 < 0 ? 0 : num1;
         int prev_row = lcd->pos.row;
+        num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
@@ -694,11 +702,11 @@ void hd44780_init_lcd(struct hd44780 *lcd)
 
     hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
         | HD44780_DL_8BITS);
-    mdelay( FREQMULT( FREQ, 15 ));
+    mdelay( FREQMULT( 15 ));
 
     hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
         | HD44780_DL_8BITS);
-    udelay( FREQMULT( FREQ, 100 ) );
+    udelay( FREQMULT( 100 ) );
 
     hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
         | HD44780_DL_8BITS);
@@ -1062,15 +1070,6 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     return written;
 }
 
-
-/**
- * simulate floating point ceil calculation here.  
- * a= actual freq in kHz
-*  b = desired delay at 270kHz
- * ceil( b * 270/a  )
- */
-#define FREQMULT(b,a) (270*a*10/b)/10+((270*a*10/b) % 10 > 0)
-
 static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
         struct i2c_client *i2c_client)
 {
@@ -1080,19 +1079,19 @@ static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
 
 
      /* enable cycle  time in nano seconds */
-    lcd->delays.tCYC_E = FREQMULT( FREQ,  1000);
+    lcd->delays.tCYC_E = FREQMULT( 1000);
     /* enable pluse width high in nano seconds */
-    lcd->delays.pwEH =  FREQMULT( FREQ, 450);
+    lcd->delays.pwEH =  FREQMULT( 450);
     /* address hold time in nano seconds */
-    lcd->delays.tAS = FREQMULT( FREQ, 60);
+    lcd->delays.tAS = FREQMULT( 60);
     /* address hold time in nano seconds */
-    lcd->delays.tAH = FREQMULT( FREQ, 20);
+    lcd->delays.tAH = FREQMULT( 20);
     /* the standard execution delay in micro seconds*/
-    lcd->delays.tExec = FREQMULT( FREQ, 39);
+    lcd->delays.tExec = FREQMULT( 39);
     /* the standard write delay (execution + 4) for a shift in micro seconds*/
-    lcd->delays.tWrite = FREQMULT( FREQ, (39 + 4));
+    lcd->delays.tWrite = FREQMULT( (39 + 4));
     /* the standard time to return home in micro seconds */
-    lcd->delays.tHome = FREQMULT( FREQ, 1530);
+    lcd->delays.tHome = FREQMULT( 1530);
 
     lcd->pos.row = 0;
     lcd->pos.col = 0;
