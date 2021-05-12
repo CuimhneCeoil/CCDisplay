@@ -496,8 +496,9 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         }
         break;
 
-    case 'J': // clear line
+    case 'J': // clear screen from cursor
         num1 = num1 < 0 ? 0 : num1;
+        int prev_row = lcd->pos.row;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
@@ -506,7 +507,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             // clear to end of screen
             vt100_clear_line( lcd, lcd->pos.col, geo->cols );
             if (lcd->pos.row < geo->rows) {
-                int prev_row = lcd->pos.row;
+
                 lcd->pos.row++;
                 for (;lcd->pos.row<geo->rows;lcd->pos.row++)
                 {
@@ -518,7 +519,6 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             //clear from beginning of screen
             vt100_clear_line( lcd, 0, lcd->pos.col );
             if (lcd->pos.row > 0){
-                int prev_row = lcd->pos.row;
                 for (lcd->pos.row=0;lcd->pos.row<prev_row;lcd->pos.row++)
                 {
                     vt100_clear_line( lcd, 0, geo->cols );
@@ -537,7 +537,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             hd44780_flush_esc_seq(lcd);
         }
         break;
-    case 'K':
+    case 'K': // clear line from cursor
         if (num2 > -1) {
             // Not a valid escape sequence, should not have second number
             printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
@@ -597,7 +597,17 @@ static void hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
     if (lcd->esc_seq_buf.length == 1)
     {
         if (lcd->esc_seq_buf.buf[0] == 'c' ) {
-            hd44780_init_lcd( lcd );
+            // clear the screen
+            strcpy( "[2J", lcd->esc_seq_buf.buf );
+            lcd->esc_seq_buf.length = 3;
+            lcd->esc_seq_buf.buf[ 3 ] = 0;
+            hd44780_parse_vt100_buff( lcd );
+            // position the cursor at home
+            strcpy( "[H", lcd->esc_seq_buf.buf );
+            lcd->esc_seq_buf.length = 2;
+            lcd->esc_seq_buf.buf[ 2 ] = 0;
+            hd44780_parse_vt100_buff( lcd );
+            // clear buffer and start again
             hd44780_leave_esc_seq(lcd);
         }
         if (lcd->esc_seq_buf.buf[0] != '[')
