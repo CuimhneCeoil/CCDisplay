@@ -1075,7 +1075,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 
     if (lcd->one_line) {
         // position the cursor at home
-        hd44780_write(lcd, "\e[H", 3);"
+        hd44780_write(lcd, "\e[H", 3);
     }
     while (written<count) {
         n = min( count-written, (size_t)BUF_SIZE);
@@ -1094,7 +1094,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     }
     if (lcd->one_line) {
         // clear to end of display
-        hd44780_write(lcd, "\e[J", 3);"
+        hd44780_write(lcd, "\e[J", 3);
     }
     //printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
 
