@@ -75,6 +75,7 @@ struct hd44780 {
     bool backlight;
     bool cursor_blink;
     bool cursor_display;
+    bool one_line;
     /* during initializaion dirty is set true so that display of initialization output
      will be cleared before first write. */
     bool dirty;
@@ -1001,11 +1002,36 @@ static ssize_t char7_show(struct device *dev, struct device_attribute *attr, cha
 }
 static DEVICE_ATTR( char7, 0664, char7_show, char7_store);
 
+static ssize_t one_line_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    return scnprintf(buf, PAGE_SIZE, "%d\n", lcd->one_line);
+}
+
+static ssize_t one_line_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    mutex_lock(&lcd->lock);
+    lcd->one_line = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
+    mutex_unlock(&lcd->lock);
+
+    return count;
+}
+static DEVICE_ATTR( one_line, 0664, one_line_show, one_line_store);
+
+
+
 static struct attribute *hd44780_device_attrs[] = {
     &dev_attr_geometry.attr,
     &dev_attr_backlight.attr,
     &dev_attr_cursor_blink.attr,
     &dev_attr_cursor_display.attr,
+    &dev_attr_one_line.attr,
     &dev_attr_char0.attr,
     &dev_attr_char1.attr,
     &dev_attr_char2.attr,
@@ -1047,6 +1073,10 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     // TODO: Consider using an interruptible lock
     //printk (KERN_DEBUG "writing %i bytes to %p", count, lcd );
 
+    if (lcd->one_line) {
+        // position the cursor at home
+        hd44780_write(lcd, "\e[H", 3);"
+    }
     while (written<count) {
         n = min( count-written, (size_t)BUF_SIZE);
 
@@ -1061,6 +1091,10 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
     }
     if (lcd->is_in_esc_seq) {
         hd44780_flush_esc_seq(lcd);
+    }
+    if (lcd->one_line) {
+        // clear to end of display
+        hd44780_write(lcd, "\e[J", 3);"
     }
     //printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
 
