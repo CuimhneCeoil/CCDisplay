@@ -45,10 +45,11 @@ Modified VT100 control escape sequences:
     
 Device attributes exported via sysfs (`/sys/class/hd44780/<device_name>`):
 * `backlight` - controls LCD backlight. Possible values: `0`, `1`
-* `geometry` - sets LCD geometry. Possible values: `20x4`, `16x2`, `8x1`
+* `char0` through `char7` - sets or displays custom character 0 thorugh 7 respectivly.  Characters are encoded as 8 5-bit patterns encoded in base 32.
 * `cursor_blink` - controls cursor blink. Possible values: `0`, `1`
 * `cursor_display` - displays or hides cursor. Possible values: `0`, `1`
-* `char0` through `char7` - sets or displays custom character 0 thorugh 7 respectivly.  Characters are encoded as 8 5-bit patterns encoded in base 32.
+* `geometry` - sets LCD geometry. Possible values: `20x4`, `16x2`, `8x1`
+* `one_line` - each print to the LCD device will start at home position and will clear to end of display after printing.
 
 #### Character encoding
 
