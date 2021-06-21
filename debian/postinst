@@ -27,7 +27,7 @@ case "$1" in
         fi
         # DKMS Versions is set by pi-buid
         dkms build ${DKMS_VERSIONS} hd44780-i2c/VERSION_STRING
-        dkms autoinstall ${DKMS_VERSIONS}  hd44780-i2c/VERSION_STRING
+        dkms install ${DKMS_VERSIONS}  hd44780-i2c/VERSION_STRING
         sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt        
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
