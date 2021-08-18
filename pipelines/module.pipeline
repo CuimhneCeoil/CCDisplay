@@ -12,7 +12,7 @@ pipeline {
             	deleteDir()
                 checkout([
                 	$class: 'GitSCM', 
-                	branches: [[name: '*/master']], 
+                	branches: [[name: "*/${i2c_branch}"]], 
                 	doGenerateSubmoduleConfigurations: false, 
                 	extensions: [
                 		[
@@ -37,7 +37,7 @@ pipeline {
 				])
 				checkout([
                 	$class: 'GitSCM', 
-                	branches: [[name: '*/main']], 
+                	branches: [[name: "*/${pkg_branch}"]], 
                 	doGenerateSubmoduleConfigurations: false, 
                 	extensions: [
                 		[
