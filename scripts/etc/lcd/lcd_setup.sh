@@ -2,8 +2,8 @@
 dir=`dirname $0`
 msg=`cat ${dir}/message.txt`
 strt="${msg}
-Booting...
-Please Wait"
+Booting
+Please Wait..."
 #id=0x27
 id=0x21
 
@@ -26,13 +26,13 @@ case $1 in
             sleep 1
             dev=`ls /sys/class/hd44780/`
         done
-        printf "\e[H${msg}\e[K\nStartup" > /dev/${dev}
+        printf "\e[H${msg}\nStartup\nPlease wait..." > /dev/${dev}
         echo "0" > /sys/class/hd44780/${dev}/cursor_blink
         echo "0" > /sys/class/hd44780/${dev}/cursor_display
         ;;
     "stop")
         dev=`ls /sys/class/hd44780/`
-        printf "\e[2J\e[H${msg}\nShutdown" > /dev/${dev}
+        printf "\e[2J\e[H${msg}\nShutdown\nPlease wait..." > /dev/${dev}
         echo ${id} > /sys/class/i2c-adapter/i2c-1/delete_device
         ;;
     *)
