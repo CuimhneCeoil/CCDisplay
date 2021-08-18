@@ -1,11 +1,19 @@
-#!/bin/bash
+#!/bin/bash -x
 dir=`dirname $0`
 msg=`cat ${dir}/message.txt`
-
+strt="${msg}
+Booting...
+Please Wait"
 #id=0x27
 id=0x21
 
-modprobe hd44780-i2c startup="${msg} booting ..."
+LOG_ERR=0
+LOG_WARNING=1
+LOG_NOTICE=2
+LOG_INFO=3
+LOG_DEBUG=4
+
+modprobe hd44780-i2c loglevel=${LOG_WARNING} startup="${strt}"
 
 case $1 in
     "start")
@@ -18,7 +26,7 @@ case $1 in
             sleep 1
             dev=`ls /sys/class/hd44780/`
         done
-        printf "\e[2J\e[H${msg}\nStartup" > /dev/${dev}
+        printf "\e[H${msg}\e[K\nStartup" > /dev/${dev}
         echo "0" > /sys/class/hd44780/${dev}/cursor_blink
         echo "0" > /sys/class/hd44780/${dev}/cursor_display
         ;;
