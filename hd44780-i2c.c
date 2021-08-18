@@ -1,4 +1,5 @@
 #include <linux/module.h>
+#include <linux/moduleparam.h>
 #include <linux/fs.h>
 #include <linux/printk.h>
 #include <linux/device.h>
@@ -9,6 +10,20 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/string.h>
+
+
+/*
+ * parameters
+ */
+char *startup = 0;
+module_param( startup, charp, S_IRUSR );
+bool debug = false;
+module_param( startup, bool, S_IRUSR );
+
+/*
+ * DEBUG stuff
+ */
+#define DEBUG(...) if (debug) { printk (KERN_DEBUG  __VA_ARGS__ ); }
 
 /*
  * HEADER STUFF
@@ -248,34 +263,34 @@ static void recalc_pos( struct hd44780 *lcd)
     struct hd44780_geometry *geo = lcd->geometry;
     int oldrow = lcd->pos.row;
 
-    //printk (KERN_DEBUG "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
     while (lcd->pos.col >= geo->cols) {
         lcd->pos.row += 1;
         lcd->pos.col -= geo->cols;
     }
-    //printk (KERN_DEBUG "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     while (lcd->pos.col < 0) {
         lcd->pos.row -= 1;
         lcd->pos.col += geo->cols;
     }
-    //printk (KERN_DEBUG "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     while (lcd->pos.row < 0)
     {
         lcd->pos.row += geo->rows;
     }
-    //printk (KERN_DEBUG "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     lcd->pos.row = lcd->pos.row % geo->rows;
-    //printk (KERN_DEBUG "after row mod: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after row mod: (%i,%i )", lcd->pos.row, lcd->pos.col);
 
     if (oldrow != lcd->pos.row) {
         // handle discontinuous row starting positions
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
                 | (geo->start_addrs[lcd->pos.row]+lcd->pos.col));
     }
-    //printk (KERN_DEBUG "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
 }
 
 /*
@@ -1050,14 +1065,14 @@ static int hd44780_file_open(struct inode *inode, struct file *filp)
 {
     filp->private_data = container_of(inode->i_cdev, struct hd44780, cdev);
 
-    //printk (KERN_DEBUG "opening %p on %p", filp->private_data, filp );
+    DEBUG( "opening %p on %p", filp->private_data, filp );
 
     return 0;
 }
 
 static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
-    //printk (KERN_DEBUG "releasing %p on %p", filp->private_data, filp );
+    DEBUG( "releasing %p on %p", filp->private_data, filp );
     return 0;
 }
 
@@ -1071,7 +1086,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 
     mutex_lock(&lcd->lock);
     // TODO: Consider using an interruptible lock
-    //printk (KERN_DEBUG "writing %i bytes to %p", count, lcd );
+    DEBUG( "writing %i bytes to %p", count, lcd );
 
     if (lcd->one_line) {
         // position the cursor at home
@@ -1096,7 +1111,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
         // clear to end of display
         hd44780_write(lcd, "\e[J", 3);
     }
-    //printk (KERN_DEBUG "done writing %i bytes to %p", written, lcd );
+    DEBUG( "done writing %i bytes to %p", written, lcd );
 
     mutex_unlock(&lcd->lock);
 
@@ -1188,8 +1203,12 @@ static int hd44780_probe(struct i2c_client *client, const struct i2c_device_id *
 
     hd44780_init_lcd(lcd);
 
+    if (startup == 0) {
     hd44780_print(lcd, "hd44780-i2c on /dev/");
     hd44780_print(lcd, device->kobj.name);
+    } else {
+        hd44780_print(lcd, startup );
+    }
     lcd->dirty = true;
 
     return 0;
