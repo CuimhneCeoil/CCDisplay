@@ -5,7 +5,7 @@ msg=`cat ${dir}/message.txt`
 #id=0x27
 id=0x21
 
-modprobe hd44780-i2c
+modprobe hd44780-i2c startup="${msg} booting ..."
 
 case $1 in
     "start")
