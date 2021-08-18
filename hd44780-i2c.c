@@ -1,5 +1,4 @@
 #include <linux/module.h>
-#include <linux/moduleparam.h>
 #include <linux/fs.h>
 #include <linux/printk.h>
 #include <linux/device.h>
@@ -17,13 +16,18 @@
  */
 char *startup = 0;
 module_param( startup, charp, S_IRUSR );
-bool debug = false;
-module_param( startup, bool, S_IRUSR );
+int loglevel = 0;
+module_param( loglevel, int, S_IRUSR );
 
 /*
  * DEBUG stuff
  */
-#define DEBUG(...) if (debug) { printk (KERN_DEBUG  __VA_ARGS__ ); }
+
+#define DEBUG(...) if (loglevel>=KERN_DEBUG) { printk (KERN_DEBUG  __VA_ARGS__ ); }
+#define INFO(...) if (loglevel>=KERN_INFO) { printk (KERN_INFO  __VA_ARGS__ ); }
+#define NOTICE(...) if (loglevel>=KERN_NOTICE) { printk (KERN_NOTICE  __VA_ARGS__ ); }
+#define WARNING(...) if (loglevel>=KERN_WARNING) { printk (KERN_WARNING  __VA_ARGS__ ); }
+#define ERROR(...) if (loglevel>=KERN_ERR) { printk (KERN_ERR  __VA_ARGS__ ); }
 
 /*
  * HEADER STUFF
@@ -263,34 +267,34 @@ static void recalc_pos( struct hd44780 *lcd)
     struct hd44780_geometry *geo = lcd->geometry;
     int oldrow = lcd->pos.row;
 
-    DEBUG( "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col)
     while (lcd->pos.col >= geo->cols) {
         lcd->pos.row += 1;
         lcd->pos.col -= geo->cols;
     }
-    DEBUG( "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col)
 
     while (lcd->pos.col < 0) {
         lcd->pos.row -= 1;
         lcd->pos.col += geo->cols;
     }
-    DEBUG( "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col)
 
     while (lcd->pos.row < 0)
     {
         lcd->pos.row += geo->rows;
     }
-    DEBUG( "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col)
 
     lcd->pos.row = lcd->pos.row % geo->rows;
-    DEBUG( "after row mod: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "after row mod: (%i,%i )", lcd->pos.row, lcd->pos.col)
 
     if (oldrow != lcd->pos.row) {
         // handle discontinuous row starting positions
         hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
                 | (geo->start_addrs[lcd->pos.row]+lcd->pos.col));
     }
-    DEBUG( "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col);
+    DEBUG( "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col)
 }
 
 /*
@@ -361,7 +365,7 @@ static void hd44780_leave_esc_seq(struct hd44780 *lcd)
 static void hd44780_flush_esc_seq(struct hd44780 *lcd)
 {
     int idx;
-    //printk (KERN_INFO, "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
+    INFO( "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
     /* Write \e that initiated current esc seq */
     hd44780_write_char(lcd, '\e');
 
@@ -383,7 +387,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     int col;
     int start_addr;
 
-    //printk (KERN_INFO "vt100_clear_line( %i, %i ) -cursor pos: %i %i", start, end, lcd->pos.row, lcd->pos.col );
+    INFO( "vt100_clear_line( %i, %i ) -cursor pos: %i %i", start, end, lcd->pos.row, lcd->pos.col )
 
     geo = lcd->geometry;
     if (start > end || start >= geo->cols || start<0)
@@ -394,7 +398,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
     // adjust max_col to be first excluded value;
     max_col = min( end+1, geo->cols );
 
-    //printk (KERN_INFO "vt100_clear_line adjusted to ( %i, %i )", start, max_col );
+    INFO( "vt100_clear_line adjusted to ( %i, %i )", start, max_col );
 
     start_addr = geo->start_addrs[lcd->pos.row]+start;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
@@ -403,7 +407,7 @@ static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
         hd44780_write_data(lcd, ' ');
     start_addr = geo->start_addrs[lcd->pos.row]+lcd->pos.col;
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
-    //printk (KERN_INFO "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col );
+    INFO( "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col )
 }
 
 static void hd44780_update_display_ctrl(struct hd44780 *lcd)
@@ -445,7 +449,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         if (numlen>MAX_VT100_FIRST_NUMBER)
         {
             // first number too long
-            printk (KERN_INFO "first number too long: %s \n", lcd->esc_seq_buf.buf );
+            INFO( "first number too long: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
             return;
         }
@@ -458,7 +462,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
                 if (numlen>MAX_VT100_SECOND_NUMBER)
                 {
                     // second number too long
-                    printk (KERN_INFO "second number too long: %s \n", lcd->esc_seq_buf.buf );
+                    INFO( "second number too long: %s \n", lcd->esc_seq_buf.buf )
                     hd44780_flush_esc_seq(lcd);
                     return;
                 }
@@ -478,7 +482,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
     case 'D': // left
         if (num2 > -1) {
             // Not a valid escape sequence, should not have second number
-            printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
+            INFO( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
             return;
         }
@@ -505,7 +509,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
     case 'E':
         if (num1 > -1) {
-            printk (KERN_INFO "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
             return;
         }
@@ -532,7 +536,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
-            printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 == 0) {
             // clear to end of screen
@@ -562,14 +566,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
         } else {
             // Not a valid escape sequence, only [0-2] is supported
-            printk (KERN_INFO "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         }
         break;
     case 'K': // clear line from cursor
         if (num2 > -1) {
             // Not a valid escape sequence, should not have second number
-            printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 <=0) {
             // Clear line from cursor right
@@ -581,14 +585,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             // Clear entire line
             vt100_clear_line( lcd, 0, lcd->geometry->cols);
         } else {
-            printk (KERN_INFO "Not a valid escape sequence, first number range [0-2]: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         }
         break;
     case 'm':
         if (num2 > -1) {
             // Not a valid escape sequence, m has second number
-            printk (KERN_INFO "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 <= 0) {
             // turn off character modes
@@ -604,14 +608,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             lcd->cursor_blink = true;
             hd44780_update_display_ctrl(lcd);
         } else {
-            printk (KERN_INFO "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf );
+            WARN( "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf )
             // not a valid number
             hd44780_flush_esc_seq(lcd);
         }
         break;
 
     default:
-        printk (KERN_INFO "Unknown escape sequence: %s \n", lcd->esc_seq_buf.buf );
+        WARN( "Unknown escape sequence: %s \n", lcd->esc_seq_buf.buf )
         hd44780_flush_esc_seq(lcd);
     }
     hd44780_leave_esc_seq(lcd);
@@ -885,7 +889,7 @@ static ssize_t character_show(u8 charNum, struct device *dev, struct device_attr
     mutex_unlock(&lcd->lock);
     character[8] = 0;
 
-//    printk (KERN_DEBUG "showing = %s from character %i\n", character, charNum );
+    DEBUG( "showing = %s from character %i\n", character, charNum )
     return scnprintf(buf, PAGE_SIZE, "%s\n", character);
 }
 
@@ -900,11 +904,11 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
 
     // 8 chars + null
     if (count!=9) {
-        printk (KERN_ERR "Wrong character count.  expected 9 got %i", count );
+        ERROR( "Wrong character count.  expected 9 got %i", count )
         return -EINVAL;
     }
 
-//    printk (KERN_DEBUG "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum );
+    DEBUG( "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum )
 
     for( idx=0;idx<8;idx++)
     {
@@ -924,31 +928,27 @@ static ssize_t character_store(int charNum, struct device *dev, struct device_at
             }
             else
             {
-                printk (KERN_ERR "Invalid character code.  expected 0-9A-V got %c", buf[idx] );
+                ERROR( "Invalid character code.  expected 0-9A-V got %c", buf[idx] )
                 return -EINVAL;
             }
         }
     }
-//    printk (KERN_DEBUG "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum );
+    DEBUG( "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum )
 
     mutex_lock(&lcd->lock);
-//    printk (KERN_DEBUG "preparing internal pointer copy at offset %i", charOffset );
+    DEBUG( "preparing internal pointer copy at offset %i", charOffset )
     cp = lcd->character+charOffset;
-//    printk (KERN_DEBUG "copying data to LCD");
+    DEBUG( "copying data to LCD")
     hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
     for (idx=0;idx<8;idx++)   {
         cp[idx] = buf[idx];
         hd44780_write_data( lcd, code[idx]  );
     }
     hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
-//    printk (KERN_DEBUG "finished copying data LCD");
+    DEBUG( "finished copying data LCD")
     mutex_unlock(&lcd->lock);
     
-//    printk (KERN_DEBUG "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0],
-//            cp[1], cp[2], cp[3],
-//            cp[4], cp[5], cp[6],
-//            cp[7], charNum );
-
+    DEBUG( "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0], cp[1], cp[2], cp[3], cp[4], cp[5], cp[6], cp[7], charNum )
 
     return 9;
 }
@@ -1065,14 +1065,14 @@ static int hd44780_file_open(struct inode *inode, struct file *filp)
 {
     filp->private_data = container_of(inode->i_cdev, struct hd44780, cdev);
 
-    DEBUG( "opening %p on %p", filp->private_data, filp );
+    DEBUG( "opening %p on %p", filp->private_data, filp )
 
     return 0;
 }
 
 static int hd44780_file_release(struct inode *inode, struct file *filp)
 {
-    DEBUG( "releasing %p on %p", filp->private_data, filp );
+    DEBUG( "releasing %p on %p", filp->private_data, filp )
     return 0;
 }
 
@@ -1086,7 +1086,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
 
     mutex_lock(&lcd->lock);
     // TODO: Consider using an interruptible lock
-    DEBUG( "writing %i bytes to %p", count, lcd );
+    DEBUG( "writing %i bytes to %p", count, lcd )
 
     if (lcd->one_line) {
         // position the cursor at home
@@ -1111,7 +1111,7 @@ static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, siz
         // clear to end of display
         hd44780_write(lcd, "\e[J", 3);
     }
-    DEBUG( "done writing %i bytes to %p", written, lcd );
+    DEBUG( "done writing %i bytes to %p", written, lcd )
 
     mutex_unlock(&lcd->lock);
 
