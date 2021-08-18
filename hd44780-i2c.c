@@ -365,7 +365,7 @@ static void hd44780_leave_esc_seq(struct hd44780 *lcd)
 static void hd44780_flush_esc_seq(struct hd44780 *lcd)
 {
     int idx;
-    INFO( "hd44780_flush_esc_seq: %s", lcd->esc_seq_buf.length );
+    INFO( "hd44780_flush_esc_seq: %d", lcd->esc_seq_buf.length );
     /* Write \e that initiated current esc seq */
     hd44780_write_char(lcd, '\e');
 
@@ -509,7 +509,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         break;
     case 'E':
         if (num1 > -1) {
-            WARN( "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
             return;
         }
@@ -536,7 +536,7 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
         num1 = num1 < 0 ? 0 : num1;
         if (num2 != -1) {
             // Not a valid escape sequence, J has second number
-            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 == 0) {
             // clear to end of screen
@@ -566,14 +566,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
         } else {
             // Not a valid escape sequence, only [0-2] is supported
-            WARN( "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         }
         break;
     case 'K': // clear line from cursor
         if (num2 > -1) {
             // Not a valid escape sequence, should not have second number
-            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 <=0) {
             // Clear line from cursor right
@@ -585,14 +585,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             // Clear entire line
             vt100_clear_line( lcd, 0, lcd->geometry->cols);
         } else {
-            WARN( "Not a valid escape sequence, first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         }
         break;
     case 'm':
         if (num2 > -1) {
             // Not a valid escape sequence, m has second number
-            WARN( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
             hd44780_flush_esc_seq(lcd);
         } else if (num1 <= 0) {
             // turn off character modes
@@ -608,14 +608,14 @@ static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
             lcd->cursor_blink = true;
             hd44780_update_display_ctrl(lcd);
         } else {
-            WARN( "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf )
+            WARNING( "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf )
             // not a valid number
             hd44780_flush_esc_seq(lcd);
         }
         break;
 
     default:
-        WARN( "Unknown escape sequence: %s \n", lcd->esc_seq_buf.buf )
+        WARNING( "Unknown escape sequence: %s \n", lcd->esc_seq_buf.buf )
         hd44780_flush_esc_seq(lcd);
     }
     hd44780_leave_esc_seq(lcd);
