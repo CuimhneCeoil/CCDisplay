@@ -23,11 +23,11 @@ module_param( loglevel, int, S_IRUSR );
  * DEBUG stuff
  */
 
-#define DEBUG(...) if (loglevel>=KERN_DEBUG) { printk (KERN_DEBUG  __VA_ARGS__ ); }
-#define INFO(...) if (loglevel>=KERN_INFO) { printk (KERN_INFO  __VA_ARGS__ ); }
-#define NOTICE(...) if (loglevel>=KERN_NOTICE) { printk (KERN_NOTICE  __VA_ARGS__ ); }
-#define WARNING(...) if (loglevel>=KERN_WARNING) { printk (KERN_WARNING  __VA_ARGS__ ); }
-#define ERROR(...) if (loglevel>=KERN_ERR) { printk (KERN_ERR  __VA_ARGS__ ); }
+#define DEBUG(...) if (loglevel>=4) { printk (KERN_DEBUG  __VA_ARGS__ ); }
+#define INFO(...) if (loglevel>=3) { printk (KERN_INFO  __VA_ARGS__ ); }
+#define NOTICE(...) if (loglevel>=2) { printk (KERN_NOTICE  __VA_ARGS__ ); }
+#define WARNING(...) if (loglevel>=1) { printk (KERN_WARNING  __VA_ARGS__ ); }
+#define ERROR(...) if (loglevel>=0) { printk (KERN_ERR  __VA_ARGS__ ); }
 
 /*
  * HEADER STUFF
