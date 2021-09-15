@@ -1,0 +1,1320 @@
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/printk.h>
+#include <linux/device.h>
+#include <linux/i2c.h>
+#include <linux/delay.h>
+#include <linux/cdev.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+#include <linux/list.h>
+#include <linux/string.h>
+
+
+/*
+ * parameters
+ */
+char *startup = 0;
+module_param( startup, charp, S_IRUSR );
+int loglevel = 0;
+module_param( loglevel, int, S_IRUSR );
+
+/*
+ * DEBUG stuff
+ */
+
+#define DEBUG(...) if (loglevel>=4) { printk (KERN_DEBUG  __VA_ARGS__ ); }
+#define INFO(...) if (loglevel>=3) { printk (KERN_INFO  __VA_ARGS__ ); }
+#define NOTICE(...) if (loglevel>=2) { printk (KERN_NOTICE  __VA_ARGS__ ); }
+#define WARNING(...) if (loglevel>=1) { printk (KERN_WARNING  __VA_ARGS__ ); }
+#define ERROR(...) if (loglevel>=0) { printk (KERN_ERR  __VA_ARGS__ ); }
+
+/*
+ * HEADER STUFF
+ */
+
+#define BUF_SIZE        64
+#define ESC_SEQ_BUF_SIZE    16
+#define MAX_VT100_FIRST_NUMBER 2
+#define MAX_VT100_SECOND_NUMBER 2
+
+struct hd44780_geometry {
+    int cols;
+    int rows;
+    int start_addrs[];
+};
+
+/*
+ * timing delays are based on hd44780 documentation for 270 kHz so
+ * they must be adjusted for different freq.
+ * i2c freq = 100kHz
+ */
+#define FREQ 100
+
+/**
+ * simulate floating point ceil calculation here.
+ * ceil( delay * 270/FREQ  )
+ * delay The requested delay
+ */
+#define FREQMULT(delay) (270*delay*10/FREQ)/10+((270*delay*10/FREQ) % 10 > 0)
+
+
+struct hd44780 {
+    struct cdev cdev;
+    struct device *device;
+    struct i2c_client *i2c_client;
+    struct hd44780_geometry *geometry;
+
+    struct {
+        int tCYC_E;
+        int pwEH;
+        int tAS;
+        int tAH;
+        int tExec;
+        int tWrite;
+        int tHome;
+    } delays;
+
+    /* Current cursor position on the display */
+    struct {
+        int row;
+        int col;
+    } pos;
+    /* custom character storage 8 chars of 8 bytes*/
+    char character[64];
+
+    char buf[BUF_SIZE];
+    struct {
+        char buf[ESC_SEQ_BUF_SIZE];
+        int length;
+    } esc_seq_buf;
+    bool is_in_esc_seq;
+    char p_counter;
+
+    bool backlight;
+    bool cursor_blink;
+    bool cursor_display;
+    bool one_line;
+    /* during initializaion dirty is set true so that display of initialization output
+     will be cleared before first write. */
+    bool dirty;
+
+    struct mutex lock;
+    struct list_head list;
+};
+
+void hd44780_write(struct hd44780 *, const char *, size_t);
+void hd44780_init_lcd(struct hd44780 *);
+void hd44780_print(struct hd44780 *, const char *);
+void hd44780_set_geometry(struct hd44780 *, struct hd44780_geometry *);
+
+static void vt100_clear_line( struct hd44780 *lcd, int start, int end );
+
+extern struct hd44780_geometry *hd44780_geometries[];
+
+/*
+ * DEVICE INFO
+ */
+
+#define BL  0x08
+/*
+ * Busy flag
+ */
+#define BF   0x04
+/*
+ * read/write read=1/write=0
+ */
+#define RW  0x02
+/*
+ * register selector  0=instruction/1=data
+ */
+#define RS  0x01
+
+#define HD44780_CLEAR_DISPLAY   0x01
+#define HD44780_RETURN_HOME 0x02
+#define HD44780_ENTRY_MODE_SET  0x04
+#define HD44780_DISPLAY_CTRL    0x08
+#define HD44780_SHIFT       0x10
+#define HD44780_FUNCTION_SET    0x20
+#define HD44780_CGRAM_ADDR  0x40
+#define HD44780_DDRAM_ADDR  0x80
+
+#define HD44780_DL_8BITS    0x10
+#define HD44780_DL_4BITS    0x00
+#define HD44780_N_2LINES    0x08
+#define HD44780_N_1LINE     0x00
+
+#define HD44780_D_DISPLAY_ON    0x04
+#define HD44780_C_CURSOR_ON 0x02
+#define HD44780_B_BLINK_ON  0x01
+
+#define HD44780_ID_INCREMENT    0x02
+#define HD44780_ID_DECREMENT    0x00
+#define HD44780_S_SHIFT_ON  0x01
+#define HD44780_S_SHIFT_OFF 0x00
+
+static struct hd44780_geometry hd44780_geometry_20x4 = {
+    .cols = 20,
+    .rows = 4,
+    .start_addrs = {0x00, 0x40, 0x14, 0x54},
+};
+
+static struct hd44780_geometry hd44780_geometry_16x2 = {
+    .cols = 16,
+    .rows = 2,
+    .start_addrs = {0x00, 0x40},
+};
+
+static struct hd44780_geometry hd44780_geometry_8x1 = {
+    .cols = 8,
+    .rows = 1,
+    .start_addrs = {0x00},
+};
+
+struct hd44780_geometry *hd44780_geometries[] = {
+    &hd44780_geometry_20x4,
+    &hd44780_geometry_16x2,
+    &hd44780_geometry_8x1,
+    NULL
+};
+
+/* Defines possible register that we can write to: instruction or data register*/
+typedef enum { IR, DR } dest_reg;
+
+/*
+
+
+    WRITE BLOCKS
+*/
+
+static void hd44780_write_nibble(struct hd44780 *lcd, dest_reg reg, u8 data)
+{
+    /* Shift the interesting data on the upper 4 bits (b7-b4) */
+    data = (data << 4) & 0xF0;
+
+    /* Flip the RS bit if we write to data register */
+    if (reg == DR)
+        data |= RS;
+
+    /* Keep the RW bit low, because we write */
+    data = data & ~RW;
+
+    /* Flip the backlight bit */
+    if (lcd->backlight)
+        data |= BL;
+
+    i2c_smbus_write_byte(lcd->i2c_client, data);
+    ndelay( lcd->delays.tAS );
+
+    /* Raise the Busy Flag... */
+    i2c_smbus_write_byte(lcd->i2c_client, data | BF);
+    ndelay( lcd->delays.pwEH );
+
+    /* ...and let it fall to clock the data into the HD44780's register */
+    i2c_smbus_write_byte(lcd->i2c_client, data);
+    ndelay( lcd->delays.tCYC_E );
+}
+
+/*
+ * Takes a regular 8-bit instruction and writes it's high nibble into device's
+ * instruction register. The low nibble is assumed to be all zeros. This is
+ * used with a physical 4-bit bus when the device is still expecting 8-bit
+ * instructions.
+ */
+static void hd44780_write_instruction_high_nibble(struct hd44780 *lcd, u8 data)
+{
+    u8 h = (data >> 4) & 0x0F;
+
+    hd44780_write_nibble(lcd, IR, h);
+
+    udelay( lcd->delays.tWrite );
+}
+
+static void hd44780_write_instruction(struct hd44780 *lcd, u8 data)
+{
+    u8 h = (data >> 4) & 0x0F;
+    u8 l = data & 0x0F;
+
+    hd44780_write_nibble(lcd, IR, h);
+    hd44780_write_nibble(lcd, IR, l);
+
+
+    if ( (HD44780_CLEAR_DISPLAY & data) || (HD44780_RETURN_HOME & data)) {
+        udelay( lcd->delays.tHome);
+    } else  {
+        udelay( lcd->delays.tExec );
+    }
+
+}
+
+/*
+ * writes byte and advances the characer position in the display
+ * but not in the lcd object.
+ */
+static void hd44780_write_data(struct hd44780 *lcd, u8 data)
+{
+    u8 h = (data >> 4) & 0x0F;
+    u8 l = data & 0x0F;
+
+    hd44780_write_nibble(lcd, DR, h);
+    hd44780_write_nibble(lcd, DR, l);
+
+    udelay( lcd->delays.tWrite );
+}
+
+static void recalc_pos( struct hd44780 *lcd)
+{
+    struct hd44780_geometry *geo = lcd->geometry;
+    int oldrow = lcd->pos.row;
+
+    DEBUG( "start pos: (%i,%i )", lcd->pos.row, lcd->pos.col)
+    while (lcd->pos.col >= geo->cols) {
+        lcd->pos.row += 1;
+        lcd->pos.col -= geo->cols;
+    }
+    DEBUG( "after col >: (%i,%i )", lcd->pos.row, lcd->pos.col)
+
+    while (lcd->pos.col < 0) {
+        lcd->pos.row -= 1;
+        lcd->pos.col += geo->cols;
+    }
+    DEBUG( "after col <: (%i,%i )", lcd->pos.row, lcd->pos.col)
+
+    while (lcd->pos.row < 0)
+    {
+        lcd->pos.row += geo->rows;
+    }
+    DEBUG( "after row <: (%i,%i )", lcd->pos.row, lcd->pos.col)
+
+    lcd->pos.row = lcd->pos.row % geo->rows;
+    DEBUG( "after row mod: (%i,%i )", lcd->pos.row, lcd->pos.col)
+
+    if (oldrow != lcd->pos.row) {
+        // handle discontinuous row starting positions
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
+                | (geo->start_addrs[lcd->pos.row]+lcd->pos.col));
+    }
+    DEBUG( "end pos: (%i,%i )", lcd->pos.row, lcd->pos.col)
+}
+
+/*
+ * writes byte and advances, advances the character position in the display
+ * and adjusts the col, row properly
+ */
+static void hd44780_write_char(struct hd44780 *lcd, char ch)
+{
+    hd44780_write_data(lcd, ch);
+    lcd->pos.col++;
+    recalc_pos( lcd );
+}
+
+/**
+ * Calls the hd4780 clear display which positions the cursor back to 0,0
+ * so we adjust the lcd->pos.row and lcd->pos.col accordingly
+ */
+static void hd44780_clear_display(struct hd44780 *lcd)
+{
+    hd44780_write_instruction(lcd, HD44780_CLEAR_DISPLAY);
+
+    /* Wait for 1.64 ms because this one needs more time */
+    udelay( lcd->delays.tHome );
+
+    /*
+     * CLEAR_DISPLAY instruction also returns cursor to home,
+     * so we need to update it locally.
+     */
+    lcd->pos.row = 0;
+    lcd->pos.col = 0;
+}
+
+static void hd44780_handle_new_line(struct hd44780 *lcd)
+{
+    struct hd44780_geometry *geo = lcd->geometry;
+
+    // clear to end of line
+    vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
+    lcd->pos.row++;
+    lcd->pos.col=0;
+    recalc_pos( lcd );
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
+        | geo->start_addrs[lcd->pos.row]);
+}
+
+static void hd44780_handle_carriage_return(struct hd44780 *lcd)
+{
+    struct hd44780_geometry *geo = lcd->geometry;
+
+    lcd->pos.col = 0;
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR
+        | geo->start_addrs[lcd->pos.row]);
+}
+
+/*
+ * stop processing esc sequence
+ */
+static void hd44780_leave_esc_seq(struct hd44780 *lcd)
+{
+    memset(lcd->esc_seq_buf.buf, 0, ESC_SEQ_BUF_SIZE);
+    lcd->esc_seq_buf.length = 0;
+    lcd->is_in_esc_seq = false;
+}
+
+/*
+ * write the escape sequence to display and stop processing sequence
+ */
+static void hd44780_flush_esc_seq(struct hd44780 *lcd)
+{
+    int idx;
+    INFO( "hd44780_flush_esc_seq: %d", lcd->esc_seq_buf.length );
+    /* Write \e that initiated current esc seq */
+    hd44780_write_char(lcd, '\e');
+
+    /* Flush current esc seq to display*/
+    for (idx=0;idx<lcd->esc_seq_buf.length;idx++) {
+        hd44780_write_char(lcd, lcd->esc_seq_buf.buf[idx]);
+    }
+
+    /* clear the buffer */
+    hd44780_leave_esc_seq(lcd);
+}
+/*
+ * clears character from start to end inclusive
+ * start and end are 0 based.  Does not move the cursor
+ */
+static void vt100_clear_line( struct hd44780 *lcd, int start, int end ) {
+    struct hd44780_geometry *geo;
+    int max_col;
+    int col;
+    int start_addr;
+
+    INFO( "vt100_clear_line( %i, %i ) -cursor pos: %i %i", start, end, lcd->pos.row, lcd->pos.col )
+
+    geo = lcd->geometry;
+    if (start > end || start >= geo->cols || start<0)
+    {
+        return;
+    }
+
+    // adjust max_col to be first excluded value;
+    max_col = min( end+1, geo->cols );
+
+    INFO( "vt100_clear_line adjusted to ( %i, %i )", start, max_col );
+
+    start_addr = geo->start_addrs[lcd->pos.row]+start;
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
+
+    for (col = start; col < max_col; col++)
+        hd44780_write_data(lcd, ' ');
+    start_addr = geo->start_addrs[lcd->pos.row]+lcd->pos.col;
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | start_addr);
+    INFO( "vt100_clear_line FINISHED -cursor pos: %i %i", lcd->pos.row, lcd->pos.col )
+}
+
+static void hd44780_update_display_ctrl(struct hd44780 *lcd)
+{
+    hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL
+        | HD44780_D_DISPLAY_ON
+        | (lcd->cursor_display ? HD44780_C_CURSOR_ON : 0)
+        | (lcd->cursor_blink ? HD44780_B_BLINK_ON : 0 )
+        );
+}
+
+static int parse_number( const char* idx, int length )
+{
+    int result = 0;
+    int i;
+    for (i=0;i<length;i++) {
+        result = (result *10)+(*(idx+i)-'0');
+    }
+    return result;
+}
+/*
+VT100 sequence buffer parser
+
+position documented in https://vt100.net/docs/vt100-ug/chapter3.html
+*/
+static void hd44780_parse_vt100_buff(struct hd44780 *lcd) {
+    char* idx= lcd->esc_seq_buf.buf;
+    int numlen;
+    int num1=-1;
+    int num2=-1;
+    int prev_row = lcd->pos.row;
+    struct hd44780_geometry *geo = lcd->geometry;
+
+    // skip the '['
+    idx++;
+    numlen=strspn( idx, "0123456789");
+    if (numlen)
+    {
+        if (numlen>MAX_VT100_FIRST_NUMBER)
+        {
+            // first number too long
+            INFO( "first number too long: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+            return;
+        }
+        num1 = parse_number( idx, numlen );
+        idx+=numlen;
+        if ( *idx == ';' ) {
+            idx++;
+            numlen=strspn( idx, "0123456789");
+            if (numlen) {
+                if (numlen>MAX_VT100_SECOND_NUMBER)
+                {
+                    // second number too long
+                    INFO( "second number too long: %s \n", lcd->esc_seq_buf.buf )
+                    hd44780_flush_esc_seq(lcd);
+                    return;
+                }
+                num2 = parse_number( idx, numlen );
+                idx+=numlen;
+            }
+        }
+    } else {
+        if (*idx == ';') {
+            idx++;
+        }
+    }
+    switch( *idx ) {
+    case 'A': // up
+    case 'B': // down
+    case 'C': // right
+    case 'D': // left
+        if (num2 > -1) {
+            // Not a valid escape sequence, should not have second number
+            INFO( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+            return;
+        }
+        if (num1 <= 0)
+        {
+            num1 = 1;
+        }
+        switch(*idx) {
+        case 'A':
+            lcd->pos.row -= num1;
+            break;
+        case 'B':
+            lcd->pos.row += num1;
+            break;
+        case 'C':
+            lcd->pos.col += num1;
+            break;
+        case 'D':
+            lcd->pos.col -= num1;
+            break;
+        }
+        recalc_pos( lcd );
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[lcd->pos.row] + lcd->pos.col));
+        break;
+    case 'E':
+        if (num1 > -1) {
+            WARNING( "Not a valid escape sequence, should not have number: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+            return;
+        }
+        lcd->pos.row++;
+        lcd->pos.col=0;
+        recalc_pos( lcd );
+        hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | geo->start_addrs[lcd->pos.row]);
+        break;
+
+    case 'H': // positioning -1 & 0 for row or column = 1
+        num1 = num1 <= 1 ? 1 : num1;
+        num2 = num2 <= 1 ? 1 : num2;
+        lcd->pos.row = (num1-1);
+        lcd->pos.col = (num2-1);
+        recalc_pos( lcd );
+        if (lcd->pos.row == 0 && lcd->pos.col == 0) {
+            hd44780_write_instruction(lcd, HD44780_RETURN_HOME);
+        } else {
+            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[lcd->pos.row] + lcd->pos.col));
+        }
+        break;
+
+    case 'J': // clear screen from cursor
+        num1 = num1 < 0 ? 0 : num1;
+        if (num2 != -1) {
+            // Not a valid escape sequence, J has second number
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+        } else if (num1 == 0) {
+            // clear to end of screen
+            vt100_clear_line( lcd, lcd->pos.col, geo->cols );
+            if (lcd->pos.row < geo->rows) {
+                lcd->pos.row++;
+                for (;lcd->pos.row<geo->rows;lcd->pos.row++)
+                {
+                    vt100_clear_line( lcd, 0, geo->cols );
+                }
+                lcd->pos.row = prev_row;
+            }
+        } else if (num1 == 1) {
+            //clear from beginning of screen
+            vt100_clear_line( lcd, 0, lcd->pos.col );
+            if (lcd->pos.row > 0){
+                for (lcd->pos.row=0;lcd->pos.row<prev_row;lcd->pos.row++)
+                {
+                    vt100_clear_line( lcd, 0, geo->cols );
+                }
+                lcd->pos.row = prev_row;
+            }
+        } else if (num1 == 2) {
+            // Clear screen
+            int prev_col = lcd->pos.col;
+            hd44780_clear_display(lcd);
+            hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | (geo->start_addrs[prev_row] + prev_col));
+        } else {
+            // Not a valid escape sequence, only [0-2] is supported
+            WARNING( "Not a valid escape sequence, , first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+        }
+        break;
+    case 'K': // clear line from cursor
+        if (num2 > -1) {
+            // Not a valid escape sequence, should not have second number
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+        } else if (num1 <=0) {
+            // Clear line from cursor right
+            vt100_clear_line( lcd, lcd->pos.col, lcd->geometry->cols);
+        } else if (num1 == 1) {
+            //Clear line from cursor left
+            vt100_clear_line( lcd, 0, lcd->pos.col);
+        } else if (num1 == 2){
+            // Clear entire line
+            vt100_clear_line( lcd, 0, lcd->geometry->cols);
+        } else {
+            WARNING( "Not a valid escape sequence, first number range [0-2]: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+        }
+        break;
+    case 'm':
+        if (num2 > -1) {
+            // Not a valid escape sequence, m has second number
+            WARNING( "Not a valid escape sequence, should not have second number: %s \n", lcd->esc_seq_buf.buf )
+            hd44780_flush_esc_seq(lcd);
+        } else if (num1 <= 0) {
+            // turn off character modes
+            lcd->cursor_blink = false;
+            lcd->cursor_display = false;
+            hd44780_update_display_ctrl(lcd);
+        } else if (num1 == 4 ) {
+            // underline mode
+            lcd->cursor_display = true;
+            hd44780_update_display_ctrl(lcd);
+        } else if (num1 == 5 ) {
+            // blink mode
+            lcd->cursor_blink = true;
+            hd44780_update_display_ctrl(lcd);
+        } else {
+            WARNING( "Not a valid escape sequence, valid numbers:  -empty-,0,4, or 5: %s \n", lcd->esc_seq_buf.buf )
+            // not a valid number
+            hd44780_flush_esc_seq(lcd);
+        }
+        break;
+
+    default:
+        WARNING( "Unknown escape sequence: %s \n", lcd->esc_seq_buf.buf )
+        hd44780_flush_esc_seq(lcd);
+    }
+    hd44780_leave_esc_seq(lcd);
+}
+
+/*
+VT100 sequence buffer builder.  fills out lcd->esc_seq_buf
+*/
+
+static void hd44780_parse_vt100( char ch, struct hd44780 *lcd ) {
+    lcd->esc_seq_buf.buf[ lcd->esc_seq_buf.length++ ] = ch;
+    if (lcd->esc_seq_buf.length == 1)
+    {
+        if (lcd->esc_seq_buf.buf[0] == 'c' ) {
+            // clear the screen
+            strcpy( "[2J", lcd->esc_seq_buf.buf );
+            lcd->esc_seq_buf.length = 3;
+            lcd->esc_seq_buf.buf[ 3 ] = 0;
+            hd44780_parse_vt100_buff( lcd );
+            // position the cursor at home
+            strcpy( "[H", lcd->esc_seq_buf.buf );
+            lcd->esc_seq_buf.length = 2;
+            lcd->esc_seq_buf.buf[ 2 ] = 0;
+            hd44780_parse_vt100_buff( lcd );
+            // clear buffer and start again
+            hd44780_leave_esc_seq(lcd);
+        }
+        if (lcd->esc_seq_buf.buf[0] != '[')
+        {
+            hd44780_flush_esc_seq(lcd);
+        }
+    } else if (lcd->esc_seq_buf.length == ESC_SEQ_BUF_SIZE ) {
+        hd44780_flush_esc_seq(lcd);
+    } else {
+        // check for end character (not digit or semi-colon)
+        if (!strchr( "0123456789;", ch )) {
+            lcd->esc_seq_buf.buf[lcd->esc_seq_buf.length] = 0;
+            // now we have a null terminated string parse it
+            hd44780_parse_vt100_buff( lcd );
+        }
+    }
+}
+
+void hd44780_write(struct hd44780 *lcd, const char *buf, size_t count)
+{
+    size_t i;
+    char ch;
+
+    if (lcd->dirty) {
+        hd44780_clear_display(lcd);
+        lcd->dirty = false;
+    }
+
+    for (i = 0; i < count; i++) {
+        ch = buf[i];
+
+        if (lcd->is_in_esc_seq) {
+            hd44780_parse_vt100(ch, lcd);
+        } else {
+            switch (ch) {
+            case '\r':
+                hd44780_handle_carriage_return(lcd);
+                break;
+            case '\n':
+                hd44780_handle_new_line(lcd);
+                break;
+            case '\e':
+                lcd->is_in_esc_seq = true;
+                break;
+            case 0x11: // ^S
+                lcd->backlight = false;
+                hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
+                break;
+            case 0x13: // ^Q
+                lcd->backlight = true;
+                hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
+                break;
+            default:
+                hd44780_write_char(lcd, ch);
+                break;
+            }
+        }
+    }
+}
+
+void hd44780_print(struct hd44780 *lcd, const char *str)
+{
+    hd44780_write(lcd, str, strlen(str));
+}
+
+void hd44780_set_geometry(struct hd44780 *lcd, struct hd44780_geometry *geo)
+{
+    lcd->geometry = geo;
+
+    if (lcd->is_in_esc_seq)
+        hd44780_leave_esc_seq(lcd);
+
+    hd44780_clear_display(lcd);
+}
+
+void hd44780_init_lcd(struct hd44780 *lcd)
+{
+
+    hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
+        | HD44780_DL_8BITS);
+    mdelay( FREQMULT( 15 ));
+
+    hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
+        | HD44780_DL_8BITS);
+    udelay( FREQMULT( 100 ) );
+
+    hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
+        | HD44780_DL_8BITS);
+
+    hd44780_write_instruction_high_nibble(lcd, HD44780_FUNCTION_SET
+        | HD44780_DL_4BITS);
+
+    hd44780_write_instruction(lcd, HD44780_FUNCTION_SET | HD44780_DL_4BITS
+        | HD44780_N_2LINES);
+
+    hd44780_write_instruction(lcd, HD44780_DISPLAY_CTRL | HD44780_D_DISPLAY_ON
+        | HD44780_C_CURSOR_ON | HD44780_B_BLINK_ON);
+
+    hd44780_clear_display(lcd);
+
+    hd44780_write_instruction(lcd, HD44780_ENTRY_MODE_SET
+        | HD44780_ID_INCREMENT | HD44780_S_SHIFT_OFF);
+}
+
+
+/*
+ * DRIVER STUFF
+ */
+
+#define CLASS_NAME  "hd44780"
+#define NAME        "hd44780"
+#define NUM_DEVICES 8
+
+static struct class *hd44780_class;
+static dev_t dev_no;
+/* We start with -1 so that first returned minor is 0 */
+static atomic_t next_minor = ATOMIC_INIT(-1);
+
+static LIST_HEAD(hd44780_list);
+static DEFINE_SPINLOCK(hd44780_list_lock);
+
+/* Device attributes */
+
+static ssize_t geometry_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd;
+    struct hd44780_geometry *geo;
+
+    lcd = dev_get_drvdata(dev);
+    geo = lcd->geometry;
+
+    return scnprintf(buf, PAGE_SIZE, "%dx%d\n", geo->cols, geo->rows);
+}
+
+static ssize_t geometry_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd;
+    struct hd44780_geometry *geo;
+    int cols = 0, rows = 0, i;
+
+    sscanf(buf, "%dx%d", &cols, &rows);
+
+    for (i = 0; hd44780_geometries[i] != NULL; i++) {
+        geo = hd44780_geometries[i];
+
+        if (geo->cols == cols && geo->rows == rows) {
+            lcd = dev_get_drvdata(dev);
+
+            mutex_lock(&lcd->lock);
+            hd44780_set_geometry(lcd, geo);
+            mutex_unlock(&lcd->lock);
+
+            break;
+        }
+    }
+
+    return count;
+}
+static DEVICE_ATTR( geometry, 0664, geometry_show, geometry_store);
+
+static ssize_t backlight_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    return scnprintf(buf, PAGE_SIZE, "%d\n", lcd->backlight);
+}
+
+static ssize_t backlight_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    mutex_lock(&lcd->lock);
+    lcd->backlight = (buf[0] == '1');
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
+    mutex_unlock(&lcd->lock);
+
+    return count;
+}
+static DEVICE_ATTR( backlight, 0664, backlight_show, backlight_store);
+
+static ssize_t cursor_blink_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    return scnprintf(buf, PAGE_SIZE, "%d\n", lcd->cursor_blink);
+}
+
+static ssize_t cursor_blink_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    mutex_lock(&lcd->lock);
+    lcd->cursor_blink = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
+    mutex_unlock(&lcd->lock);
+
+    return count;
+}
+static DEVICE_ATTR( cursor_blink, 0664, cursor_blink_show, cursor_blink_store);
+
+static ssize_t cursor_display_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    return scnprintf(buf, PAGE_SIZE, "%d\n", lcd->cursor_display);
+}
+
+static ssize_t cursor_display_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    mutex_lock(&lcd->lock);
+    lcd->cursor_display = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
+    mutex_unlock(&lcd->lock);
+
+    return count;
+}
+static DEVICE_ATTR( cursor_display, 0664, cursor_display_show, cursor_display_store);
+
+static ssize_t character_show(u8 charNum, struct device *dev, struct device_attribute *attr, char* buf )
+{
+
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    char character[9];
+    int charOffset;
+
+    charOffset = charNum*8;
+
+//    printk (KERN_DEBUG "reading = %c%c%c%c%c%c%c%c in character %i\n", lcd->character[charOffset],
+//                lcd->character[charOffset+1], lcd->character[charOffset+2], lcd->character[charOffset+3],
+//                lcd->character[charOffset+4], lcd->character[charOffset+5], lcd->character[charOffset+6],
+//                lcd->character[charOffset+7], charNum );
+
+    mutex_lock(&lcd->lock);
+    memcpy( character, lcd->character+charOffset, 8 );
+    mutex_unlock(&lcd->lock);
+    character[8] = 0;
+
+    DEBUG( "showing = %s from character %i\n", character, charNum )
+    return scnprintf(buf, PAGE_SIZE, "%s\n", character);
+}
+
+static ssize_t character_store(int charNum, struct device *dev, struct device_attribute *attr, const char* buf, size_t count )
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    u8 code[8];
+    int idx;
+    int charOffset = charNum*8;
+    char *cp;
+
+    // 8 chars + null
+    if (count!=9) {
+        ERROR( "Wrong character count.  expected 9 got %i", count )
+        return -EINVAL;
+    }
+
+    DEBUG( "storing = %c%c%c%c%c%c%c%c in character %i\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], charNum )
+
+    for( idx=0;idx<8;idx++)
+    {
+        if (buf[idx] <= '9')
+        {
+            if (buf[idx] >='0')
+            {
+                code[idx] = (u8)(buf[idx] - '0');
+            }
+            else {
+                return -EINVAL;
+            }
+        }
+        else if (buf[idx] <='V') {
+            if (buf[idx] >='A') {
+                code[idx] = (u8)(buf[idx] - 'A' + 10);
+            }
+            else
+            {
+                ERROR( "Invalid character code.  expected 0-9A-V got %c", buf[idx] )
+                return -EINVAL;
+            }
+        }
+    }
+    DEBUG( "storing hex= %X %X %X %X %X %X %X %X in character %i\n", code[0], code[1], code[2], code[3], code[4], code[5], code[6], code[7], charNum )
+
+    mutex_lock(&lcd->lock);
+    DEBUG( "preparing internal pointer copy at offset %i", charOffset )
+    cp = lcd->character+charOffset;
+    DEBUG( "copying data to LCD")
+    hd44780_write_instruction( lcd, (u8) HD44780_CGRAM_ADDR | charOffset );
+    for (idx=0;idx<8;idx++)   {
+        cp[idx] = buf[idx];
+        hd44780_write_data( lcd, code[idx]  );
+    }
+    hd44780_write_instruction(lcd, HD44780_DDRAM_ADDR | lcd->geometry->start_addrs[lcd->pos.row]);
+    DEBUG( "finished copying data LCD")
+    mutex_unlock(&lcd->lock);
+    
+    DEBUG( "stored = %c%c%c%c%c%c%c%c in character %i\n", cp[0], cp[1], cp[2], cp[3], cp[4], cp[5], cp[6], cp[7], charNum )
+
+    return 9;
+}
+
+static ssize_t char0_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 0, dev, attr, buf, count );
+}
+static ssize_t char0_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 0, dev, attr, buf );
+}
+static DEVICE_ATTR( char0, 0664, char0_show, char0_store);
+
+static ssize_t char1_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 1, dev, attr, buf, count );
+}
+static ssize_t char1_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 1, dev, attr, buf );
+}
+static DEVICE_ATTR( char1, 0664, char1_show, char1_store);
+
+static ssize_t char2_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 2, dev, attr, buf, count );
+}
+static ssize_t char2_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 2, dev, attr, buf );
+}
+static DEVICE_ATTR( char2, 0664, char2_show, char2_store);
+
+static ssize_t char3_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 3, dev, attr, buf, count );
+}
+static ssize_t char3_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 3, dev, attr, buf );
+}
+static DEVICE_ATTR( char3, 0664, char3_show, char3_store);
+
+static ssize_t char4_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 4, dev, attr, buf, count );
+}
+static ssize_t char4_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 4, dev, attr, buf );
+}
+static DEVICE_ATTR( char4, 0664, char4_show, char4_store);
+
+static ssize_t char5_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 5, dev, attr, buf, count );
+}
+static ssize_t char5_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 5, dev, attr, buf );
+}
+static DEVICE_ATTR( char5, 0664, char5_show, char5_store);
+
+static ssize_t char6_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 6, dev, attr, buf, count );
+}
+static ssize_t char6_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 6, dev, attr, buf );
+}
+static DEVICE_ATTR( char6, 0664, char6_show, char6_store);
+
+static ssize_t char7_store(struct device *dev, struct device_attribute *attr, const char* buf, size_t count ) {
+    return character_store( 7, dev, attr, buf, count );
+}
+static ssize_t char7_show(struct device *dev, struct device_attribute *attr, char* buf ) {
+    return character_show( 7, dev, attr, buf );
+}
+static DEVICE_ATTR( char7, 0664, char7_show, char7_store);
+
+static ssize_t one_line_show(struct device *dev, struct device_attribute *attr,
+        char *buf)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    return scnprintf(buf, PAGE_SIZE, "%d\n", lcd->one_line);
+}
+
+static ssize_t one_line_store(struct device *dev,
+        struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct hd44780 *lcd = dev_get_drvdata(dev);
+
+    mutex_lock(&lcd->lock);
+    lcd->one_line = (buf[0] == '1');
+    hd44780_update_display_ctrl(lcd);
+    mutex_unlock(&lcd->lock);
+
+    return count;
+}
+static DEVICE_ATTR( one_line, 0664, one_line_show, one_line_store);
+
+
+
+static struct attribute *hd44780_device_attrs[] = {
+    &dev_attr_geometry.attr,
+    &dev_attr_backlight.attr,
+    &dev_attr_cursor_blink.attr,
+    &dev_attr_cursor_display.attr,
+    &dev_attr_one_line.attr,
+    &dev_attr_char0.attr,
+    &dev_attr_char1.attr,
+    &dev_attr_char2.attr,
+    &dev_attr_char3.attr,
+    &dev_attr_char4.attr,
+    &dev_attr_char5.attr,
+    &dev_attr_char6.attr,
+    &dev_attr_char7.attr,
+    NULL
+};
+ATTRIBUTE_GROUPS(hd44780_device);
+
+/* File operations */
+
+static int hd44780_file_open(struct inode *inode, struct file *filp)
+{
+    filp->private_data = container_of(inode->i_cdev, struct hd44780, cdev);
+
+    DEBUG( "opening %p on %p", filp->private_data, filp )
+
+    return 0;
+}
+
+static int hd44780_file_release(struct inode *inode, struct file *filp)
+{
+    DEBUG( "releasing %p on %p", filp->private_data, filp )
+    return 0;
+}
+
+static ssize_t hd44780_file_write(struct file *filp, const char __user *buf, size_t count, loff_t *offp)
+{
+    struct hd44780 *lcd;
+    size_t n;
+    size_t written = 0;
+
+    lcd = filp->private_data;
+
+    mutex_lock(&lcd->lock);
+    // TODO: Consider using an interruptible lock
+    DEBUG( "writing %i bytes to %p", count, lcd )
+
+    if (lcd->one_line) {
+        // position the cursor at home
+        hd44780_write(lcd, "\e[H", 3);
+    }
+    while (written<count) {
+        n = min( count-written, (size_t)BUF_SIZE);
+
+       // TODO: Support partial writes during errors?
+       if (copy_from_user(lcd->buf, buf+written, n)) {
+           mutex_unlock(&lcd->lock);
+           return -EFAULT;
+       }
+
+       hd44780_write(lcd, lcd->buf, n);
+       written += n;
+    }
+    if (lcd->is_in_esc_seq) {
+        hd44780_flush_esc_seq(lcd);
+    }
+    if (lcd->one_line) {
+        // clear to end of display
+        hd44780_write(lcd, "\e[J", 3);
+    }
+    DEBUG( "done writing %i bytes to %p", written, lcd )
+
+    mutex_unlock(&lcd->lock);
+
+    return written;
+}
+
+static void hd44780_init(struct hd44780 *lcd, struct hd44780_geometry *geometry,
+        struct i2c_client *i2c_client)
+{
+
+    lcd->geometry = geometry;
+    lcd->i2c_client = i2c_client;
+
+
+     /* enable cycle  time in nano seconds */
+    lcd->delays.tCYC_E = FREQMULT( 1000);
+    /* enable pluse width high in nano seconds */
+    lcd->delays.pwEH =  FREQMULT( 450);
+    /* address hold time in nano seconds */
+    lcd->delays.tAS = FREQMULT( 60);
+    /* address hold time in nano seconds */
+    lcd->delays.tAH = FREQMULT( 20);
+    /* the standard execution delay in micro seconds*/
+    lcd->delays.tExec = FREQMULT( 39);
+    /* the standard write delay (execution + 4) for a shift in micro seconds*/
+    lcd->delays.tWrite = FREQMULT( (39 + 4));
+    /* the standard time to return home in micro seconds */
+    lcd->delays.tHome = FREQMULT( 1530);
+
+    lcd->pos.row = 0;
+    lcd->pos.col = 0;
+    memset(lcd->esc_seq_buf.buf, 0, ESC_SEQ_BUF_SIZE);
+    lcd->esc_seq_buf.length = 0;
+    lcd->p_counter = 0;
+    lcd->is_in_esc_seq = false;
+    lcd->backlight = true;
+    lcd->cursor_blink = true;
+    lcd->cursor_display = true;
+    lcd->one_line = false;
+    memset(lcd->character, '0', 64 );
+    mutex_init(&lcd->lock);
+}
+
+static struct file_operations fops = {
+    .open = hd44780_file_open,
+    .release = hd44780_file_release,
+    .write = hd44780_file_write,
+};
+
+static int hd44780_probe(struct i2c_client *client, const struct i2c_device_id *id)
+{
+    dev_t devt;
+    struct hd44780 *lcd;
+    struct device *device;
+    int ret, minor;
+
+    minor = atomic_inc_return(&next_minor);
+    devt = MKDEV(MAJOR(dev_no), minor);
+
+    lcd = (struct hd44780 *)kmalloc(sizeof(struct hd44780), GFP_KERNEL);
+    if (!lcd) {
+        return -ENOMEM;
+    }
+
+    hd44780_init(lcd, hd44780_geometries[0], client);
+
+    spin_lock(&hd44780_list_lock);
+    list_add(&lcd->list, &hd44780_list);
+    spin_unlock(&hd44780_list_lock);
+
+    cdev_init(&lcd->cdev, &fops);
+    ret = cdev_add(&lcd->cdev, devt, 1);
+    if (ret) {
+        pr_warn("Can't add cdev\n");
+        goto exit;
+    }
+
+    device = device_create_with_groups(hd44780_class, NULL, devt, NULL,
+        hd44780_device_groups, "lcd%d", MINOR(devt));
+
+    if (IS_ERR(device)) {
+        ret = PTR_ERR(device);
+        pr_warn("Can't create device\n");
+        goto del_exit;
+    }
+
+    dev_set_drvdata(device, lcd);
+    lcd->device = device;
+
+    hd44780_init_lcd(lcd);
+
+    if (startup == 0) {
+    hd44780_print(lcd, "hd44780-i2c on /dev/");
+    hd44780_print(lcd, device->kobj.name);
+    } else {
+        hd44780_print(lcd, startup );
+    }
+    lcd->dirty = true;
+
+    return 0;
+
+del_exit:
+    cdev_del(&lcd->cdev);
+
+    spin_lock(&hd44780_list_lock);
+    list_del(&lcd->list);
+    spin_unlock(&hd44780_list_lock);
+exit:
+    kfree(lcd);
+
+    return ret;
+}
+
+static struct hd44780 * get_hd44780_by_i2c_client(struct i2c_client *i2c_client)
+{
+    struct hd44780 *lcd;
+
+    spin_lock(&hd44780_list_lock);
+    list_for_each_entry(lcd, &hd44780_list, list) {
+        if (lcd->i2c_client->addr == i2c_client->addr) {
+            spin_unlock(&hd44780_list_lock);
+            return lcd;
+        }
+    }
+    spin_unlock(&hd44780_list_lock);
+
+    return NULL;
+}
+
+
+static int hd44780_remove(struct i2c_client *client)
+{
+    struct hd44780 *lcd;
+    lcd = get_hd44780_by_i2c_client(client);
+    device_destroy(hd44780_class, lcd->device->devt);
+    cdev_del(&lcd->cdev);
+
+    spin_lock(&hd44780_list_lock);
+    list_del(&lcd->list);
+    spin_unlock(&hd44780_list_lock);
+
+    kfree(lcd);
+
+    return 0;
+}
+
+static const struct i2c_device_id hd44780_id[] = {
+    { NAME, 0},
+    { }
+};
+
+static struct i2c_driver hd44780_driver = {
+    .driver = {
+        .name   = NAME,
+        .owner  = THIS_MODULE,
+    },
+    .probe = hd44780_probe,
+    .remove = hd44780_remove,
+    .id_table = hd44780_id,
+};
+
+static int __init hd44780_mod_init(void)
+{
+    int ret;
+
+    ret = alloc_chrdev_region(&dev_no, 0, NUM_DEVICES, NAME);
+    if (ret) {
+        pr_warn("Can't allocate chardev region");
+        return ret;
+    }
+
+    hd44780_class = class_create(THIS_MODULE, CLASS_NAME);
+    if (IS_ERR(hd44780_class)) {
+        ret = PTR_ERR(hd44780_class);
+        pr_warn("Can't create %s class\n", CLASS_NAME);
+        goto exit;
+    }
+
+    ret = i2c_add_driver(&hd44780_driver);
+    if (ret) {
+        pr_warn("Can't register I2C driver %s\n", hd44780_driver.driver.name);
+        goto destroy_exit;
+    }
+
+    return 0;
+
+destroy_exit:
+    class_destroy(hd44780_class);
+exit:
+    unregister_chrdev_region(dev_no, NUM_DEVICES);
+
+    return ret;
+}
+module_init(hd44780_mod_init);
+
+static void __exit hd44780_mod_exit(void)
+{
+    i2c_del_driver(&hd44780_driver);
+    class_destroy(hd44780_class);
+    unregister_chrdev_region(dev_no, NUM_DEVICES);
+}
+module_exit(hd44780_mod_exit);
+
+MODULE_AUTHOR("Claude Warren <claude@xenei.com>");
+MODULE_DESCRIPTION("HD44780 I2C via PCF8574 driver");
+MODULE_LICENSE("GPL");
