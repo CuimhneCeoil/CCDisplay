@@ -26,8 +26,8 @@ case "$1" in
             echo "lcd group already exists"
         fi
         # DKMS Versions is set by pi-buid
-        dkms build ${DKMS_VERSIONS} hd44780-i2c/VERSION_STRING
-        dkms install ${DKMS_VERSIONS}  hd44780-i2c/VERSION_STRING
+        dkms build ${DKMS_VERSIONS} hd44780-i2c/1.0.0
+        dkms install ${DKMS_VERSIONS}  hd44780-i2c/1.0.0
         sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt        
         ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
         ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"

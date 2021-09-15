@@ -1,33 +1,19 @@
-VERSION:=$(shell cat scripts/usr/src/hd44780-i2c/dkms.conf | grep "^PACKAGE_VERSION" | cut -f2 -d'"')
+VERSION=1.0.0
 
-.PHONY: all, clean, install, install-usr, install-etc, update-debian
+ifneq ($(KERNELRELEASE),)
+	obj-m := hd44780-i2c.o
+	hd44780-i2c := hd44780-i2c.o
 
-update-debian:
-	gbp dch --ignore-branch -S -c --git-author -N ${VERSION} ; \
-	sed -i "s/^Version:.*$$/Version: $(VERSION)/g" debian/control
-	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/postinst
-	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/postrm
-	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/preinst
-	sed -i "s/VERSION_STRING/$(VERSION)/g" debian/prerm
-	
-	mv scripts/usr/src/hd44780-i2c scripts/usr/src/hd44780-i2c-${VERSION}
+else
+	KERNELDIR ?= /lib/modules/$(shell uname -r)/build
+	PWD := $(shell pwd)
+	echo "KERNELDIR = $(KERNELDIR)"
 
-
-all: update-debian 
+default:
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
 
 clean:
-	
-	
-install-usr: scripts/usr/src/hd44780-i2c-$(VERSION)/dkms.conf
-	install -d $(DESTDIR)/usr
-	for fn in `find scripts/usr -type d | sed 's+scripts/usr++g'`; do install -m 755 -d $(DESTDIR)/usr$$fn; done
-	for fn in `find scripts/usr -type f | sed 's+scripts/usr++g'`; do install -m 644 scripts/usr$$fn $(DESTDIR)/usr$$fn; done
+	$(MAKE) -C $(KERNELDIR) M=$(PWD) clean
 
-install-etc:
-	install -d $(DESTDIR)/etc
-	for fn in `find scripts/etc -type d | sed 's+scripts/etc++g'`; do install -m 755 -d $(DESTDIR)/etc$$fn; done
-	for fn in `find scripts/etc -type f | sed 's+scripts/etc++g'`; do install -m 644 scripts/etc$$fn $(DESTDIR)/etc$$fn; done
-
-install:  install-usr install-etc	
-
+endif
 	

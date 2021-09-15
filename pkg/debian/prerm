@@ -28,9 +28,9 @@ case "$1" in
         then
             systemctl disable lcd
         fi
-        if [ `dkms status hd44780-i2c/VERSION_STRING | wc -l` -gt 0 ]
+        if [ `dkms status hd44780-i2c/1.0.0 | wc -l` -gt 0 ]
         then
-            dkms remove hd44780-i2c/VERSION_STRING --all
+            dkms remove hd44780-i2c/1.0.0 --all
         fi
     ;;
 
