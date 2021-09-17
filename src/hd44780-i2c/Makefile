@@ -8,7 +8,7 @@ hd44780-i2c := hd44780-i2c.o
 
 else
 
-default:
+build:
 	$(MAKE) -C $(KERNELDIR) M=$(shell pwd) modules
 
 clean:
