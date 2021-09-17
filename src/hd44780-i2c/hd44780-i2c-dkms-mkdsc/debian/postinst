@@ -30,6 +30,25 @@ dkms_configure () {
 case "$1" in
 	configure)
 		dkms_configure
+        if [[ 1 -ne `grep -c "^lcd:" /etc/group` ]]
+        then
+            echo "Creating lcd group"
+            addgroup --system lcd
+        else
+            echo "lcd group already exists"
+        fi
+        sed -i 's/#dtparam=i2c_arm=on/dtparam=i2c_arm=on/g' /boot/config.txt        
+        ln -sf "/etc/lcd/lcd.service" "/etc/systemd/system/lcd.service"
+        ln -sf "/etc/lcd/whichlcd" "/usr/bin/whichlcd"
+        ln -sf "/etc/lcd/resetlcd" "/usr/bin/resetcd"
+        ln -sf "/etc/lcd/printcd" "/usr/bin/printcd"
+        chgrp -R lcd /etc/lcd
+        chmod ug+x /etc/lcd/lcd_setup.sh
+        chmod ugo+x /etc/lcd/whichlcd
+        chmod ugo+x /etc/lcd/resetlcd
+        chmod ugo+x /etc/lcd/printlcd
+        systemctl enable lcd
+        systemctl start lcd
 	;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
