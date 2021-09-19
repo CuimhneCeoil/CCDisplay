@@ -2,7 +2,7 @@
 # -*- makefile -*-
 
 # Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 DEB_NAME=DEBIAN_PACKAGE
 NAME=MODULE_NAME
@@ -29,6 +29,7 @@ clean:
 	dh_clean
 
 install: build
+	echo "WAHHHH HOOOOO"
 	dh_testdir
 	dh_testroot
 	dh_prep

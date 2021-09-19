@@ -16,7 +16,7 @@ help:
 	@echo	remove..........\(DKMS only\) Removes the source from the module tree.  If ARCH is not specified removes all.
 	@echo	install.........\(DKMS only\) Installs the driver. If specified, ARCH identifies the version to install, otherwise the current kernel and arch is installed.
 	@echo	uninstall.......\(DKMS only\) Uninstalls the driver. If specified, ARCH identifies the version to uninstall, otherwise the current kernel and arch is uninstalled.
-	@echo	deb.............\(DKMS only\) Builds a debian package of the source. If specified, ARCH identifies the version to package, otherwise the current kernel and arch is packaged.
+	@echo	pkg.............\(DKMS only\) Builds a debian package of the source. If specified, ARCH identifies the version to package, otherwise the current kernel and arch is packaged.
 	@echo " "
 	@echo Options
 	@echo DKMS - Specifies that a DKMS bild should be used 
@@ -28,14 +28,14 @@ prolog :
 ifeq ($(DKMS),)
 	@echo "Satandard build"
 else
-	@echo "DKMS build"
+	@echo "DKMS style build"
 endif	
 
 build: prolog 
 ifeq ($(DKMS),)
 	$(MAKE) -C src
 else
-	$(if $(shell dkms status | grep "hd44780-i2c, $(VERSION)"), $(shell $(SUDO) cp src/hd44780-i2c/* /usr/src/hd44780-i2c-$(VERSION)), $(SUDO) dkms add src/hd44780-i2c )
+	$(if $(shell dkms status | grep "hd44780-i2c, $(VERSION)"), $(shell $(SUDO) cp -r src/hd44780-i2c/* /usr/src/hd44780-i2c-$(VERSION)), $(SUDO) dkms add src/hd44780-i2c )
 	$(SUDO) dkms build hd44780-i2c/${VERSION} $(ARCH_Flg)
 endif
 
@@ -49,6 +49,9 @@ endif
 clean: prolog
 ifeq ($(DKMS),)
 	$(MAKE) -C src clean
+else
+	$(SUDO) dkms remove hd44780-i2c/${VERSION} $(if $(ARCH), -k $(ARCH), --all )
+	rm -rf /usr/src/hd44780-i2c/${VERSION}
 endif
 
 install: default
@@ -65,10 +68,10 @@ else
 	$(SUDO) dkms uninstall hd44780-i2c/${VERSION} $(ARCH_Flg)
 endif
 
-deb: prolog 
+pkg: prolog 
 ifeq ($(DKMS),)
 	@echo "No standard debian package builder available"
 else
 	$(if $(shell dkms status | grep "hd44780-i2c, $(VERSION)"), , $(SUDO) dkms add src/hd44780-i2c )
-	$(SUDO) dkms mkdeb hd44780-i2c/${VERSION} --source-only $(ARCH_Flg)
+	$(SUDO) dkms mkdeb hd44780-i2c/${VERSION} $(ARCH_Flg) --source-only
 endif

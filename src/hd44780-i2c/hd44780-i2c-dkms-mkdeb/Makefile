@@ -6,7 +6,13 @@ all:
 
 clean:
 
-install:
+install-etc:
+	echo "YAH install-etc <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+	install -d $(DESTDIR)/etc
+	for fn in `find etc -type d `; do install -m 755 -d $(DESTDIR)/$$fn; done
+	for fn in `find etc -type f `; do install -m 644 $$fn $(DESTDIR)/$$fn; done
+
+install:  install-etc	
 
 #source tree
 ifeq ("$(wildcard $(NAME)-$(VERSION))", "$(NAME)-$(VERSION)")
