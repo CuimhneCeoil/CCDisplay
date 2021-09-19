@@ -51,7 +51,6 @@ case "$1" in
 		chmod ugo+x /etc/lcd/resetlcd
 		chmod ugo+x /etc/lcd/printlcd
 		systemctl enable lcd
-		systemctl start lcd
 		;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
