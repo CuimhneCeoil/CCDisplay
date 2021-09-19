@@ -29,7 +29,6 @@ clean:
 	dh_clean
 
 install: build
-	echo "WAHHHH HOOOOO"
 	dh_testdir
 	dh_testroot
 	dh_prep
