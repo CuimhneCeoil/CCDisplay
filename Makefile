@@ -29,10 +29,14 @@ help:
 	@echo NO_LOCAL - Specifies that the /usr/src tree should be used rather than $(PWD)/build. 
 
 prolog : 
+	@echo Version: $(VERSION)
 ifeq ($(DKMS),)
 	@echo "Satandard build"
 else
 	@echo "DKMS style build"
+	@echo "SRC_ADDED: $(SRC_ADDED)"
+	@echo "ARCH: $(ARCH_Flg)"
+	@echo "NO_LOCAL: $(NO_LOCAL)"
 endif	
 
 build: prolog 
@@ -49,8 +53,9 @@ ifeq ($(DKMS),)
 	$(MAKE) -C src clean
 else
 	$(if $(SRC_ADDED),  $(RMV_CMD))
+	$(if $(NO_LOCAL), , $(SUDO) rm -rf ${PWD}/build/hd44780-i2c-$(VERSION) )
+	$(SUDO) rm -f ./build/hd44780-i2c-dkms_$(VERSION)_*
 endif
-	rm -f ./build/hd44780-i2c-dkms_$(VERSION)_*
 
 install: build
 ifeq ($(DKMS),)
