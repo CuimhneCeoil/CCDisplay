@@ -50,6 +50,8 @@ case "$1" in
 		chmod ugo+x /etc/lcd/whichlcd
 		chmod ugo+x /etc/lcd/resetlcd
 		chmod ugo+x /etc/lcd/printlcd
+		echo "HD44780-i2c LDC driver will be enabled on next boot"
+		echo "Execute \"systemctl start lcd\" to start immediately"
 		;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
