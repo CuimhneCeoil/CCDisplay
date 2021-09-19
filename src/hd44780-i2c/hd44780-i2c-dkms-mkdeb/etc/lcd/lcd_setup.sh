@@ -44,6 +44,7 @@ case $1 in
             count=`expr $count + 1`
             if [ ${count} -gt 60 ]
             then
+                echo "Unable to connect to hd44780 device"
                 exit 1
             fi
             
